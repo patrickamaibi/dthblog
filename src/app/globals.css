@@ -1,0 +1,273 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #0A1F44;       /* brief Section 3: primary deep navy */
+  --primary: #0A1F44;          /* brief Section 3: primary deep navy */
+  --accent: #1A4FD6;           /* brief Section 3: accent electric blue */
+  --muted: #f8fafc;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+}
+
+.dark {
+  --background: #030712;       /* gray-950, matches site's dark:bg-gray-950 */
+  --foreground: #f9fafb;       /* gray-50 */
+  --primary: #0A1F44;
+  --accent: #5B82F0;           /* lighter tint of brand electric blue for dark-bg contrast */
+  --muted: #111827;            /* gray-900 */
+  --muted-foreground: #94a3b8;
+  --border: #1f2937;           /* gray-800 */
+  --card: #0f172a;             /* slate-900 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ============================================================
+   Background overlay — subtle tech dot pattern using brand accent
+   ============================================================ */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: radial-gradient(circle at center, rgba(26, 79, 214, 0.4) 1px, transparent 1px);
+  background-size: 30px 30px;
+  pointer-events: none;
+  opacity: 0.15;
+  z-index: -1;
+}
+
+.dark body::before {
+  opacity: 0.08; /* dimmer on dark background so dots don't overpower */
+}
+
+/* ============================================================
+   Glassmorphism — matches main site utility
+   ============================================================ */
+.glassmorphism {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.dark .glassmorphism {
+  background: rgba(15, 23, 42, 0.7); /* slate-900 based, for dark mode */
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   Focus Styles — Accessibility (brief Section 7: visible keyboard focus states)
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================================
+   Signal Trace Animation (Hero)
+   ============================================================ */
+@keyframes signal-trace {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.signal-trace {
+  animation: signal-trace 20s linear infinite;
+}
+
+.animate-blink {
+  animation: blink 1s step-start infinite;
+}
+
+/* ============================================================
+   Moving Gradient Text (Hero rotating word)
+   ============================================================ */
+@keyframes gradient-move {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.animate-gradient-move {
+  animation: gradient-move 4s linear infinite;
+}
+
+/* ============================================================
+   Fade-in-up entrance (ArticleGrid, Category pages, About page)
+   ============================================================ */
+@keyframes dth-fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dth-fade-in-up {
+  animation: dth-fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.dth-delay-1 { animation-delay: 0.05s; }
+.dth-delay-2 { animation-delay: 0.1s; }
+.dth-delay-3 { animation-delay: 0.15s; }
+.dth-delay-4 { animation-delay: 0.2s; }
+.dth-delay-5 { animation-delay: 0.25s; }
+.dth-delay-6 { animation-delay: 0.3s; }
+.dth-delay-7 { animation-delay: 0.35s; }
+
+/* ============================================================
+   Bouncy pop hover (ArticleGrid "Browse All Topics" card)
+   ============================================================ */
+.dth-pop {
+  transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.45s ease;
+}
+.dth-pop:hover {
+  transform: scale(1.045) translateY(-4px);
+}
+
+/* ============================================================
+   Category hero — animated network mesh + premium image zoom
+   ============================================================ */
+@keyframes dth-mesh-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50%       { opacity: 1;   transform: scale(1.15); }
+}
+.dth-mesh-node {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dth-mesh-pulse 3.5s ease-in-out infinite;
+}
+.dth-mesh-line {
+  stroke-dasharray: 6 10;
+  animation: signal-trace 14s linear infinite;
+}
+
+@keyframes dth-hero-zoom {
+  from { transform: scale(1.08); }
+  to   { transform: scale(1); }
+}
+.dth-hero-zoom {
+  animation: dth-hero-zoom 8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================================
+   Newsletter popup entrance
+   ============================================================ */
+@keyframes dth-popup-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dth-popup-in {
+  animation: dth-popup-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dth-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.dth-fade-in {
+  animation: dth-fade-in 0.3s ease forwards;
+}
+
+/* ============================================================
+   Reduced Motion — Disable all animations
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .signal-trace {
+    animation: none;
+    transform: translateX(0);
+  }
+
+  .animate-gradient-move {
+    animation: none;
+  }
+
+  .animate-blink {
+    animation: none;
+  }
+
+  .dth-fade-in-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .dth-mesh-node,
+  .dth-mesh-line,
+  .dth-hero-zoom,
+  .dth-popup-in,
+  .dth-fade-in,
+  .dth-pop {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+}
+
+/* ============================================================
+   Prose / Article Typography (brief Section 4: article readability)
+   ============================================================ */
+.prose {
+  --tw-prose-body: var(--muted-foreground);
+  --tw-prose-headings: var(--foreground);
+  --tw-prose-links: var(--accent);
+  --tw-prose-bold: var(--foreground);
+  --tw-prose-counters: var(--muted-foreground);
+  --tw-prose-bullets: var(--accent);
+  --tw-prose-hr: var(--border);
+  --tw-prose-quotes: var(--foreground);
+  --tw-prose-quote-borders: var(--accent);
+  --tw-prose-code: var(--foreground);
+  --tw-prose-pre-bg: var(--muted);
+}
+
+/* ============================================================
+   Scrollbar (subtle)
+   ============================================================ */
+::-webkit-scrollbar          { width: 6px; height: 6px; }
+::-webkit-scrollbar-track    { background: transparent; }
+::-webkit-scrollbar-thumb    { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
