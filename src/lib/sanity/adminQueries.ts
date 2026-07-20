@@ -1,5 +1,7 @@
 ﻿import { adminClient } from "./adminClient";
-
+export async function getAllTagsForAdmin() {
+  return adminClient.fetch(`*[_type == "tag"] | order(title asc){ _id, title }`);
+}
 export async function getAllPostsForAdmin() {
   return adminClient.fetch(`
     *[_type == "post"] | order(publishedAt desc) {

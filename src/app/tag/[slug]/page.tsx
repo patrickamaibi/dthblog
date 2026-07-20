@@ -5,17 +5,17 @@ import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 
 export async function generateStaticParams() {
-  return TAGS.map((t) => ({ slug: t.slug }));
+  return Object.values(TAGS).map((t) => ({ slug: t.slug }));
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const tag = TAGS.find((t) => t.slug === params.slug);
+  const tag = Object.values(TAGS).find((t) => t.slug === params.slug);
   if (!tag) return {};
   return { title: `#${tag.title} — DiscoveryTech Hub Blog` };
 }
 
 export default function TagPage({ params }: { params: { slug: string } }) {
-  const tag = TAGS.find((t) => t.slug === params.slug);
+  const tag = Object.values(TAGS).find((t) => t.slug === params.slug);
   if (!tag) notFound();
   const posts = POSTS.filter((p) => p.tags.some((t) => t.slug === tag.slug));
 

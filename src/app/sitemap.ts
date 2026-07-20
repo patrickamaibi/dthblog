@@ -25,7 +25,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  const authorPages: MetadataRoute.Sitemap = AUTHORS.map((a) => ({
+  const authorPages: MetadataRoute.Sitemap = Object.values(AUTHORS).map((a) => ({
     url: `${base}/author/${a.slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly",

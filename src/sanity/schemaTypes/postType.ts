@@ -19,6 +19,12 @@ export const postType = defineType({
       },
     }),
     defineField({
+      name: 'excerpt',
+      type: 'text',
+      rows: 3,
+      description: 'Short summary shown on post cards and the article header.',
+    }),
+    defineField({
       name: 'author',
       type: 'reference',
       to: {type: 'author'},
@@ -34,13 +40,42 @@ export const postType = defineType({
           name: 'alt',
           type: 'string',
           title: 'Alternative text',
-        })
-      ]
+        }),
+      ],
+    }),
+    defineField({
+      name: 'gallery',
+      title: 'Gallery',
+      type: 'array',
+      description: 'Additional images for this post. Pick one above as the cover image.',
+      of: [
+        defineArrayMember({
+          type: 'image',
+          options: {hotspot: true},
+          fields: [
+            defineField({
+              name: 'alt',
+              type: 'string',
+              title: 'Alternative text',
+            }),
+          ],
+        }),
+      ],
     }),
     defineField({
       name: 'categories',
       type: 'array',
       of: [defineArrayMember({type: 'reference', to: {type: 'category'}})],
+    }),
+    defineField({
+      name: 'tags',
+      type: 'array',
+      of: [defineArrayMember({type: 'reference', to: {type: 'tag'}})],
+    }),
+    defineField({
+      name: 'readTime',
+      title: 'Read time (minutes)',
+      type: 'number',
     }),
     defineField({
       name: 'publishedAt',

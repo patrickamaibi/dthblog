@@ -93,7 +93,7 @@ export default function Footer() {
             <li><Link href="/search" className="hover:text-white transition-colors">Search</Link></li>
             <li>
               <a href="https://discoverytechhub.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                Main Website ↗
+                Main Website → 
               </a>
             </li>
           </ul>

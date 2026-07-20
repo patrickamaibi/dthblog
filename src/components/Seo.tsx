@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 /**
  * SEO.tsx
- * ────────────────────────────────────────────────────────────────
+ * ------------------------------
  * Two things live here:
  *
  * 1. buildMetadata() — a helper that fills in the repetitive parts of a
@@ -135,7 +135,7 @@ export const organizationJsonLd = {
  *     swap TWITTER_HANDLE above — a dead handle in Twitter Card tags
  *     doesn't break anything but looks unfinished.
  * [ ] /og.png must actually exist at the project root's /public folder
- *     at 1200×630 — this is what shows when the blog is shared on
+ *     at 1200�, 630 — this is what shows when the blog is shared on
  *     WhatsApp, Facebook, LinkedIn, etc.
  * ────────────────────────────────────────────────────────────────
  */

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { X, Mail } from "lucide-react";
@@ -7,19 +7,50 @@ export default function NewsletterPopup() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(false);
 
   function close() {
     setOpen(false);
     // Reset submitted state after the close animation would finish, so the
     // form is fresh next time the icon is clicked.
-    setTimeout(() => setSubmitted(false), 300);
+    setTimeout(() => {
+      setSubmitted(false);
+      setError(false);
+    }, 300);
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: wire to the real subscribe endpoint when ready.
-    setSubmitted(true);
-    setTimeout(close, 1800);
+    if (!email || submitting) return;
+
+    setSubmitting(true);
+    setError(false);
+
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/disctechhub@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          _subject: "New Newsletter Signup - DiscoveryTech Hub Blog (Popup)",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Submission failed");
+
+      setSubmitted(true);
+      setEmail("");
+      setTimeout(close, 1800);
+    } catch (err) {
+      console.error(err);
+      setError(true);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -61,7 +92,7 @@ export default function NewsletterPopup() {
                   Get new posts in your inbox
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                  One email whenever we publish — no spam, unsubscribe anytime.
+                  One email whenever we publish, no spam, unsubscribe anytime.
                 </p>
                 <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
                   <input
@@ -70,19 +101,26 @@ export default function NewsletterPopup() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@company.com"
-                    className="flex-1 rounded-full border border-border bg-background px-5 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    disabled={submitting}
+                    className="flex-1 rounded-full border border-border bg-background px-5 py-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-60"
                   />
                   <button
                     type="submit"
-                    className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/25 hover:opacity-90 transition-opacity whitespace-nowrap"
+                    disabled={submitting}
+                    className="rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/25 hover:opacity-90 transition-opacity whitespace-nowrap disabled:opacity-70"
                   >
-                    Subscribe
+                    {submitting ? "Subscribing..." : "Subscribe"}
                   </button>
                 </form>
+                {error && (
+                  <p className="text-red-500 mt-3 text-xs text-center">
+                    Something went wrong. Please try again.
+                  </p>
+                )}
               </>
             ) : (
               <div className="py-4 text-center">
-                <p className="text-lg font-semibold text-primary dark:text-white mb-1">You&apos;re in 🎉</p>
+                <p className="text-lg font-semibold text-primary dark:text-white mb-1">You&apos;re in ??</p>
                 <p className="text-sm text-muted-foreground">Thanks for subscribing.</p>
               </div>
             )}

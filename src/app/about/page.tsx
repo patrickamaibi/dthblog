@@ -10,7 +10,7 @@ const COVERAGE = [
   {
     icon: Code2,
     title: "Engineering",
-    description: "Architecture, performance, tooling — the technical decisions that hold up under real traffic.",
+    description: "Architecture, performance, tooling: the technical decisions that hold up under real traffic.",
   },
   {
     icon: Palette,
@@ -20,7 +20,7 @@ const COVERAGE = [
   {
     icon: TrendingUp,
     title: "Digital Transformation",
-    description: "What it actually costs and what it actually achieves for Nigerian SMEs — no inflated promises.",
+    description: "What it actually costs and what it actually achieves for Nigerian SMEs. No inflated promises.",
   },
   {
     icon: Target,
@@ -32,12 +32,12 @@ const COVERAGE = [
 export default function AboutPage() {
   return (
     <main className="min-h-screen">
-      {/* ---------- Hero — background image, text spread across full width ---------- */}
+      {/* ---------- Hero ---------- */}
       <section className="relative overflow-hidden pt-40 pb-20 sm:pt-48 sm:pb-24">
         <div className="absolute inset-0 -z-10">
           <Image
-            src="https://images.unsplash.com/photo-1758691737543-09a1b2b715fa?auto=format&fit=crop&w=1920&q=80"
-            alt=""
+            src="/hero4.png"
+            alt="DiscoveryTech Hub Blog"
             fill
             priority
             className="object-cover"
@@ -47,57 +47,25 @@ export default function AboutPage() {
         </div>
 
         <div className="mx-auto max-w-6xl px-6 sm:px-8 dth-fade-in-up">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-end">
-            {/* Left: kicker + headline */}
-            <div>
-              <div className="flex items-center gap-3 mb-8">
-                <span className="h-px w-10 bg-white/50" />
-                <span className="font-mono text-xs tracking-widest uppercase text-white/70">
-                  § About
-                </span>
-              </div>
-              <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-white leading-[1.08]">
-                Engineers first.{" "}
-                <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
-                  Writers second.
-                </span>
-              </h1>
-            </div>
-
-            {/* Right: description + facts, so text isn't bunched left/center */}
-            <div>
-              <p className="text-lg sm:text-xl text-white/80 leading-relaxed mb-8">
-                We're a collective of engineers, designers, and strategists building
-                the next generation of digital infrastructure in Nigeria and across Africa.
-              </p>
-              <div className="grid grid-cols-3 divide-x divide-white/20 border-t border-white/20 pt-5">
-                <div className="pr-4">
-                  <p className="font-mono text-[11px] tracking-widest uppercase text-white/50 mb-1">
-                    Based in
-                  </p>
-                  <p className="text-sm sm:text-base font-semibold text-white">
-                    Abuja, Nigeria
-                  </p>
-                </div>
-                <div className="px-4">
-                  <p className="font-mono text-[11px] tracking-widest uppercase text-white/50 mb-1">
-                    Reach
-                  </p>
-                  <p className="text-sm sm:text-base font-semibold text-white">
-                    Africa &amp; beyond
-                  </p>
-                </div>
-                <div className="pl-4">
-                  <p className="font-mono text-[11px] tracking-widest uppercase text-white/50 mb-1">
-                    Focus
-                  </p>
-                  <p className="text-sm sm:text-base font-semibold text-white">
-                    Product &amp; engineering
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="flex items-center gap-3 mb-8">
+            <span className="h-px w-10 bg-white/50" />
+            <span className="font-mono text-xs tracking-widest uppercase text-white/70">
+              § About
+            </span>
           </div>
+
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-white leading-[1.08] mb-6">
+            Tech Insights
+            <br />
+            <span className="bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+              That Matter.
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-white/80 leading-relaxed max-w-2xl">
+            A blog covering engineering, design, and digital growth, written for
+            anyone building something worth building.
+          </p>
         </div>
       </section>
 
@@ -106,7 +74,7 @@ export default function AboutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center mb-28 dth-fade-in-up dth-delay-1">
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border order-2 lg:order-1">
             <Image
-              src="https://images.unsplash.com/photo-1758873268745-dd2cf0d677b5?auto=format&fit=crop&w=1000&q=80"
+              src="/image1.jpg"
               alt="The DiscoveryTech Hub team at work"
               fill
               className="object-cover"
@@ -124,14 +92,14 @@ export default function AboutPage() {
             <p className="text-slate-600 dark:text-slate-300 leading-8 mb-4">
               DiscoveryTech Hub is a digital product studio based in Abuja, Nigeria.
               We believe technology is the most powerful lever for scale available
-              to African businesses — so we bridge the gap between creative vision
+              to African businesses, so we bridge the gap between creative vision
               and robust engineering, delivering products that are not only
               beautiful but genuinely resilient.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-8 mb-8">
               We work with businesses across Africa and beyond to design, build,
               and launch high-quality software products and digital experiences.
-              This blog is one part of that work — everything else lives on our
+              This blog is one part of that work; everything else lives on our
               main site.
             </p>
             <a
@@ -164,7 +132,7 @@ export default function AboutPage() {
               engineering and digital transformation in emerging markets.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-8">
-              Expect sharp, useful, technically grounded material — written by the
+              Expect sharp, useful, technically grounded material, written by the
               people actually building the work.{" "}
               <strong className="text-primary dark:text-white">No filler. No generic templates.</strong>
             </p>
@@ -172,7 +140,7 @@ export default function AboutPage() {
 
           <div className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-border">
             <Image
-              src="https://images.unsplash.com/photo-1761322572550-967ea8c0bfd9?auto=format&fit=crop&w=1000&q=80"
+              src="/dth11.png"
               alt="Notes and drafts behind the blog's writing process"
               fill
               className="object-cover"

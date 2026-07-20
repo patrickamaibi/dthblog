@@ -5,14 +5,35 @@ import { ArrowRight } from "lucide-react";
 
 export default function Newsletter() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitted">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "submitted" | "error">("idle");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
-    // TODO: wire up to actual newsletter provider/API
-    setStatus("submitted");
-    setEmail("");
+
+    setStatus("submitting");
+
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/disctechhub@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          _subject: "New Newsletter Signup - DiscoveryTech Hub Blog",
+        }),
+      });
+
+      if (!res.ok) throw new Error("Submission failed");
+
+      setStatus("submitted");
+      setEmail("");
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
   };
 
   return (
@@ -43,15 +64,24 @@ export default function Newsletter() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full sm:flex-1 px-5 py-4 rounded-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-primary dark:text-white placeholder:text-slate-400 focus-visible:outline-none"
+              disabled={status === "submitting"}
+              className="w-full sm:flex-1 px-5 py-4 rounded-full border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-primary dark:text-white placeholder:text-slate-400 focus-visible:outline-none disabled:opacity-60"
             />
             <button
               type="submit"
-              className="w-full sm:w-auto px-8 py-4 bg-primary dark:bg-blue-700 text-white rounded-full font-bold hover:bg-blue-900 dark:hover:bg-blue-600 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-2 whitespace-nowrap"
+              disabled={status === "submitting"}
+              className="w-full sm:w-auto px-8 py-4 bg-primary dark:bg-blue-700 text-white rounded-full font-bold hover:bg-blue-900 dark:hover:bg-blue-600 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1 flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-70 disabled:translate-y-0 disabled:shadow-xl"
             >
-              Subscribe <ArrowRight className="w-4 h-4" />
+              {status === "submitting" ? "Subscribing..." : "Subscribe"}
+              {status !== "submitting" && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
+        )}
+
+        {status === "error" && (
+          <p className="text-red-500 mt-4 text-sm">
+            Something went wrong. Please try again.
+          </p>
         )}
       </div>
     </section>

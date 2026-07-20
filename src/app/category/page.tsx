@@ -15,7 +15,7 @@ import {
 import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
 
-// Kept in sync with ArticleGrid.tsx and /category/[slug]/page.tsx —
+// Kept in sync with ArticleGrid.tsx and /category/[slug]/page.tsx, 
 // slugs match the real Category.slug values in lib/data.ts.
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
@@ -28,14 +28,14 @@ const CATEGORY_ICONS: Record<string, typeof Folder> = {
 };
 
 export const metadata: Metadata = {
-  title: "Topics — DiscoveryTech Hub Blog",
+  title: "Topics, DiscoveryTech Hub Blog",
   description: "Every subject we write about, from AI and product design to security and strategy.",
   alternates: {
     canonical: "https://blog.discoverytechhub.com/category",
   },
 };
 
-// Hand-placed node positions and edges (percentages of the hero box) —
+// Hand-placed node positions and edges (percentages of the hero box), 
 // deliberately fixed rather than randomized so the mesh reads as designed.
 const MESH_NODES = [
   { x: 8, y: 22 }, { x: 22, y: 55 }, { x: 15, y: 82 },
@@ -107,12 +107,12 @@ export default function CategoryIndexPage() {
   return (
     <>
       <div className="relative w-full overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28 bg-primary dark:bg-[#0A1F44]">
-        {/* Background image, dimmed to 50% opacity — same layering approach
+        {/* Background image, dimmed to 50% opacity, same layering approach
             as the About page hero: image behind, brand gradient on top,
             content on top of that. */}
         <div className="absolute inset-0">
           <Image
-            src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80"
+            src="/dth1.jpg"
             alt=""
             fill
             priority
@@ -129,7 +129,7 @@ export default function CategoryIndexPage() {
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
           <p className="font-mono text-xs tracking-widest uppercase text-white/70 mb-5">
-            <span className="text-accent">§</span> Browse
+           <span className="text-accent">§</span> Browse
           </p>
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1.05] max-w-2xl">
             Topics

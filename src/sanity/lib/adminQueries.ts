@@ -47,3 +47,9 @@ export async function getAllCategoriesForAdmin() {
     *[_type == "category"] | order(title asc) { _id, title, "slug": slug.current }
   `);
 }
+
+export async function getAllTagsForAdmin() {
+  return adminClient.fetch(/* groq */ `
+    *[_type == "tag"] | order(title asc) { _id, title }
+  `);
+}

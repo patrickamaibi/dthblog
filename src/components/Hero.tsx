@@ -56,11 +56,13 @@ function useTypingEffect(words: string[]) {
  * (dth1 and dth2 are reused a second time to fill all 5 carousel slots.)
  */
 const HERO_IMAGES = [
-  { src: "/dth1.jpg", alt: "DiscoveryTech Hub team collaborating" },
-  { src: "/dth2.jpg", alt: "DiscoveryTech Hub workspace" },
-  { src: "/dth3.jpg", alt: "DiscoveryTech Hub training session" },
-  { src: "/dth2.jpg", alt: "DiscoveryTech Hub workspace" },
-  { src: "/dth1.jpg", alt: "DiscoveryTech Hub team collaborating" },
+  { src: "/hero1.png", alt: "DiscoveryTech Hub team collaborating" },
+  { src: "/hero2.png", alt: "DiscoveryTech Hub workspace" },
+  { src: "/hero3.png", alt: "DiscoveryTech Hub training session" },
+  { src: "/hero4.png", alt: "DiscoveryTech Hub workspace" },
+  { src: "/hero5.png", alt: "DiscoveryTech Hub team collaborating" },
+   { src: "/dth7.png", alt: "DiscoveryTech Hub team collaborating" },
+   { src: "/dth9.png", alt: "DiscoveryTech Hub team AI Automation" },
 ];
 
 const FLIP_INTERVAL_MS = 4200;
@@ -160,9 +162,9 @@ export default function Hero() {
 
           {/* Image column — 5-image flip carousel */}
           {/* Card renders at aspect-[4/3] — see dimension note in Hero.tsx if resizing source images */}
-          <div className="relative aspect-[4/3] [perspective:1600px]">
+          <div className="relative aspect-[4/3] [perspective:1600px] isolate">
             <div
-              className="absolute inset-0 rounded-2xl overflow-hidden border border-border [transform-style:preserve-3d] will-change-transform"
+              className="absolute inset-0 rounded-2xl overflow-hidden border border-border [transform-style:preserve-3d]"
               style={{
                 transform: `rotateY(${angle}deg)`,
                 transition: instant ? "none" : `transform ${HALF_FLIP_MS}ms ease-in-out`,
@@ -185,7 +187,7 @@ export default function Hero() {
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
               {HERO_IMAGES.map((img, i) => (
                 <span
-                  key={img.src}
+                  key={i}
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     i === index ? "w-5 bg-white" : "w-1.5 bg-white/50"
                   }`}

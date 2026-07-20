@@ -257,7 +257,7 @@ export default function ArticleGrid() {
             style={{ animationDelay: `${CATEGORIES.length * 90}ms` }}
           >
             <Image
-              src="https://picsum.photos/seed/dth-browse-all-topics/800/600"
+              src="/dth16.png"
               alt=""
               fill
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
