@@ -8,7 +8,16 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">All posts</h1>
+      <h1 className="text-2xl font-bold text-slate-900 mb-4">All posts</h1>
+
+      <div className="mb-6">
+        <Link
+          href="/admin/posts/new"
+          className="inline-block rounded-lg bg-slate-900 text-white px-3.5 py-1.5 text-sm font-medium hover:bg-slate-800 transition-colors"
+        >
+          + New post
+        </Link>
+      </div>
 
       {posts.length === 0 ? (
         <p className="text-slate-500">

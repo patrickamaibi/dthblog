@@ -53,6 +53,13 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
+  // Request the Sanity image pre-cropped to the actual OG ratio (1200x630),
+  // instead of trusting whatever aspect ratio the original upload happens to be.
+  // Falls back to the site-wide /og.png if this post has no cover image.
+  const ogImageUrl = post.coverImage?.url
+    ? `${post.coverImage.url}?w=1200&h=630&fit=crop&auto=format`
+    : "/og.png";
+
   return {
     title: `${post.title} — DiscoveryTech Hub Blog`,
     description: post.excerpt,
@@ -66,15 +73,20 @@ export async function generateMetadata({
       publishedTime: post.publishedAt,
       authors: [post.author.name],
       url: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-      images: post.coverImage?.url
-        ? [{ url: post.coverImage.url, width: 1920, height: 823, alt: post.coverImage.alt }]
-        : [],
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: post.coverImage?.alt ?? post.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.excerpt,
-      images: post.coverImage?.url ? [post.coverImage.url] : [],
+      images: [ogImageUrl],
     },
   };
 }
