@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { adminClient } from "@/lib/sanity/adminClient";
+import { adminClient } from "@/sanity/lib/adminClient";
 
 function slugify(input: string) {
   return input
@@ -13,65 +13,70 @@ function slugify(input: string) {
     .replace(/-+/g, "-");
 }
 
-// Parses **bold** segments within a single line of text into Portable Text spans.
-function parseInline(text: string, blockIndex: number) {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter((part) => part.length > 0);
+function getField(formData: FormData, name: string, fallback = ""): string {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : fallback;
+}
 
-  if (parts.length === 0) {
-    return [{ _type: "span", _key: `span-${blockIndex}-0`, text: "", marks: [] }];
+function getAllFields(formData: FormData, name: string): string[] {
+  return formData
+    .getAll(name)
+    .filter((v): v is string => typeof v === "string" && v.length > 0);
+}
+
+function parseBody(raw: string): Record<string, unknown>[] {
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("Post content is not valid — please re-check the editor content.");
   }
 
-  return parts.map((part, i) => {
-    const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
-    return {
-      _type: "span",
-      _key: `span-${blockIndex}-${i}`,
-      text: isBold ? part.slice(2, -2) : part,
-      marks: isBold ? ["strong"] : [],
-    };
-  });
+  if (!Array.isArray(parsed)) {
+    throw new Error("Post content must be a list of blocks.");
+  }
+
+  return parsed as Record<string, unknown>[];
 }
 
-// Converts plain text (with lightweight markdown: "# " H1, "## " H2, "### " H3,
-// "**bold**") into Portable Text blocks. Paragraphs are separated by a blank line.
-function textToBlocks(text: string) {
-  return text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((paragraph, i) => {
-      let style = "normal";
-      let content = paragraph;
-
-      const h3Match = paragraph.match(/^###\s+(.*)/);
-      const h2Match = paragraph.match(/^##\s+(.*)/);
-      const h1Match = paragraph.match(/^#\s+(.*)/);
-
-      if (h3Match) {
-        style = "h3";
-        content = h3Match[1];
-      } else if (h2Match) {
-        style = "h2";
-        content = h2Match[1];
-      } else if (h1Match) {
-        style = "h1";
-        content = h1Match[1];
-      }
-
-      return {
-        _type: "block",
-        _key: `block-${i}`,
-        style,
-        markDefs: [],
-        children: parseInline(content, i),
-      };
-    });
+function parsePublishedAt(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("A valid published date is required.");
+  }
+  return date.toISOString();
 }
 
-async function resolveTagIds(tagTitles: string[]): Promise<string[]> {
+async function uploadImageIfProvided(file: File | null) {
+  if (!file || file.size === 0) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return adminClient.assets.upload("image", buffer, { filename: file.name });
+}
+
+async function uploadGalleryImages(formData: FormData, name: string) {
+  const files = formData.getAll(name).filter((f): f is File => f instanceof File && f.size > 0);
+
+  const uploaded = [];
+  for (const file of files) {
+    const asset = await uploadImageIfProvided(file);
+    if (asset) {
+      uploaded.push({
+        _type: "image",
+        _key: asset._id,
+        asset: { _type: "reference", _ref: asset._id },
+      });
+    }
+  }
+  return uploaded;
+}
+
+async function resolveNewTagIds(titles: string[]): Promise<string[]> {
   const ids: string[] = [];
-
-  for (const rawTitle of tagTitles) {
+  for (const rawTitle of titles) {
     const title = rawTitle.trim();
     if (!title) continue;
 
@@ -79,7 +84,6 @@ async function resolveTagIds(tagTitles: string[]): Promise<string[]> {
       `*[_type == "tag" && lower(title) == lower($title)][0]{ _id }`,
       { title }
     );
-
     if (existing?._id) {
       ids.push(existing._id);
       continue;
@@ -92,113 +96,152 @@ async function resolveTagIds(tagTitles: string[]): Promise<string[]> {
     });
     ids.push(created._id);
   }
-
   return ids;
 }
 
-async function uploadCoverImageIfProvided(formData: FormData) {
-  const file = formData.get("coverImage") as File | null;
-  if (!file || file.size === 0) return null;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-  return adminClient.assets.upload("image", buffer, { filename: file.name });
-}
-
-export async function createPost(formData: FormData) {
-  const title = formData.get("title") as string;
-  const slug = slugify((formData.get("slug") as string) || title);
-  const excerpt = formData.get("excerpt") as string;
-  const contentText = formData.get("content") as string;
-  const publishedAt = formData.get("publishedAt") as string;
-  const readTime = Number(formData.get("readTime"));
-  const categoryId = formData.get("categoryId") as string;
-  const authorId = formData.get("authorId") as string;
-  const tagTitles = (formData.get("tags") as string)
+async function resolveAllTagIds(formData: FormData): Promise<string[]> {
+  const checkedTagIds = getAllFields(formData, "tagIds");
+  const newTagTitles = getField(formData, "newTags")
     .split(",")
     .map((t) => t.trim())
     .filter(Boolean);
-  const coverImageAlt = formData.get("coverImageAlt") as string;
+  const createdTagIds = await resolveNewTagIds(newTagTitles);
+  return Array.from(new Set([...checkedTagIds, ...createdTagIds]));
+}
 
-  const coverAsset = await uploadCoverImageIfProvided(formData);
-  if (!coverAsset) {
-    throw new Error("A cover image is required.");
+// Revalidates every public page/section that could show this post, so admin
+// saves appear immediately on the live site regardless of the pages' own
+// time-based revalidate window.
+function revalidatePublicPages() {
+  revalidatePath("/admin");
+  revalidatePath("/");
+  revalidatePath("/category");
+  revalidatePath("/search");
+  revalidatePath("/category/[slug]", "page");
+  revalidatePath("/blog/[slug]", "page");
+}
+
+export async function createPost(formData: FormData) {
+  const title = getField(formData, "title");
+  if (!title) {
+    throw new Error("Title is required.");
   }
 
-  const tagIds = await resolveTagIds(tagTitles);
+  const slug = slugify(getField(formData, "slug") || title);
+  const excerpt = getField(formData, "excerpt");
+  const readTime = Number(getField(formData, "readTime"));
+  const authorId = getField(formData, "authorId");
+  const categoryIds = getAllFields(formData, "categoryIds");
+
+  if (!authorId) {
+    throw new Error("Author is required.");
+  }
+  if (Number.isNaN(readTime)) {
+    throw new Error("Read time must be a number.");
+  }
+
+  const publishedAt = parsePublishedAt(getField(formData, "publishedAt"));
+  const body = parseBody(getField(formData, "body"));
+  const tagIds = await resolveAllTagIds(formData);
+
+  const mainImageFile = formData.get("mainImage") as File | null;
+  const mainAsset = await uploadImageIfProvided(mainImageFile);
+  if (!mainAsset) {
+    throw new Error("A cover image is required.");
+  }
+  const mainImageAlt = getField(formData, "mainImageAlt");
+
+  const galleryImages = await uploadGalleryImages(formData, "gallery");
 
   await adminClient.create({
     _type: "post",
     title,
     slug: { current: slug },
     excerpt,
-    body: textToBlocks(contentText),
-    publishedAt: new Date(publishedAt).toISOString(),
+    body,
+    publishedAt,
     readTime,
-    categories: [{ _type: "reference", _ref: categoryId, _key: categoryId }],
     author: { _type: "reference", _ref: authorId },
+    categories: categoryIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
     tags: tagIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
+    gallery: galleryImages,
     mainImage: {
       _type: "image",
-      asset: { _type: "reference", _ref: coverAsset._id },
-      alt: coverImageAlt || title,
+      asset: { _type: "reference", _ref: mainAsset._id },
+      alt: mainImageAlt || title,
     },
   });
 
-  revalidatePath("/admin");
+  revalidatePublicPages();
   redirect("/admin");
 }
 
 export async function updatePost(postId: string, formData: FormData) {
-  const title = formData.get("title") as string;
-  const slug = slugify((formData.get("slug") as string) || title);
-  const excerpt = formData.get("excerpt") as string;
-  const contentText = formData.get("content") as string;
-  const publishedAt = formData.get("publishedAt") as string;
-  const readTime = Number(formData.get("readTime"));
-  const categoryId = formData.get("categoryId") as string;
-  const authorId = formData.get("authorId") as string;
-  const tagTitles = (formData.get("tags") as string)
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  const coverImageAlt = formData.get("coverImageAlt") as string;
+  const title = getField(formData, "title");
+  if (!title) {
+    throw new Error("Title is required.");
+  }
 
-  const tagIds = await resolveTagIds(tagTitles);
+  const slug = slugify(getField(formData, "slug") || title);
+  const excerpt = getField(formData, "excerpt");
+  const readTime = Number(getField(formData, "readTime"));
+  const authorId = getField(formData, "authorId");
+  const categoryIds = getAllFields(formData, "categoryIds");
+
+  if (!authorId) {
+    throw new Error("Author is required.");
+  }
+  if (Number.isNaN(readTime)) {
+    throw new Error("Read time must be a number.");
+  }
+
+  const publishedAt = parsePublishedAt(getField(formData, "publishedAt"));
+  const body = parseBody(getField(formData, "body"));
+  const tagIds = await resolveAllTagIds(formData);
+  const mainImageAlt = getField(formData, "mainImageAlt");
 
   const patch = adminClient.patch(postId).set({
     title,
     slug: { current: slug },
     excerpt,
-    body: textToBlocks(contentText),
-    publishedAt: new Date(publishedAt).toISOString(),
+    body,
+    publishedAt,
     readTime,
-    categories: [{ _type: "reference", _ref: categoryId, _key: categoryId }],
     author: { _type: "reference", _ref: authorId },
+    categories: categoryIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
     tags: tagIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
-    ...(coverImageAlt ? { "mainImage.alt": coverImageAlt } : {}),
+    ...(mainImageAlt ? { "mainImage.alt": mainImageAlt } : {}),
   });
 
-  const coverAsset = await uploadCoverImageIfProvided(formData);
-  if (coverAsset) {
-    await patch
-      .set({
-        mainImage: {
-          _type: "image",
-          asset: { _type: "reference", _ref: coverAsset._id },
-          alt: coverImageAlt || title,
-        },
-      })
-      .commit();
-  } else {
-    await patch.commit();
+  const mainImageFile = formData.get("mainImage") as File | null;
+  const mainAsset = await uploadImageIfProvided(mainImageFile);
+  if (mainAsset) {
+    patch.set({
+      mainImage: {
+        _type: "image",
+        asset: { _type: "reference", _ref: mainAsset._id },
+        alt: mainImageAlt || title,
+      },
+    });
   }
 
-  revalidatePath("/admin");
+  const newGalleryImages = await uploadGalleryImages(formData, "gallery");
+  if (newGalleryImages.length > 0) {
+    patch.setIfMissing({ gallery: [] }).append("gallery", newGalleryImages);
+  }
+
+  const removedGalleryKeys = getAllFields(formData, "removeGalleryKeys");
+  for (const key of removedGalleryKeys) {
+    patch.unset([`gallery[_key=="${key}"]`]);
+  }
+
+  await patch.commit();
+
+  revalidatePublicPages();
   redirect("/admin");
 }
 
 export async function deletePost(postId: string) {
   await adminClient.delete(postId);
-  revalidatePath("/admin");
+  revalidatePublicPages();
 }

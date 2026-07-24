@@ -15,7 +15,7 @@ import {
 import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
 
-export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
 // Kept in sync with ArticleGrid.tsx and /category/[slug]/page.tsx,
 // slugs match the real Category.slug values.

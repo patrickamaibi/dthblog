@@ -1,7 +1,7 @@
 import { getAllPosts } from "@/sanity/lib/queries";
-import SearchClient from "../../components/SearchClient";
+import SearchClient from "@/components/SearchClient";
 
-export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
 export default async function SearchPage() {
   const posts = await getAllPosts();
