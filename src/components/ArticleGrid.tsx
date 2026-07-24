@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { POSTS, CATEGORIES, formatDate } from "@/lib/data";
+import { getAllPosts, getAllCategories, formatDate } from "@/sanity/lib/queries";
 import {
   ArrowRight,
   Bot,
@@ -9,13 +9,10 @@ import {
   Compass,
   GraduationCap,
   Folder,
-  Hash,
   LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
-// Maps each category slug to a representative icon.
-// Falls back to a generic folder icon for any category not listed here.
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "ai-automation": Bot,
   branding: Palette,
@@ -24,9 +21,6 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   "ict-training": GraduationCap,
 };
 
-// Custom brand marks — lucide-react removed Facebook/Instagram/LinkedIn/TikTok
-// icons from its published exports (trademark policy), so these are defined
-// locally instead of relying on the library.
 function InstagramIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -66,25 +60,6 @@ const SOCIAL_LINKS = [
   { name: "TikTok", href: "https://tiktok.com/@discoverytechhub", icon: TikTokIcon },
 ];
 
-/** Aggregates tag frequency across all posts and returns the most-used tags. */
-function getPopularTags(limit = 10) {
-  const counts = new Map<string, { title: string; slug: string; count: number }>();
-
-  for (const post of POSTS) {
-    for (const tag of post.tags) {
-      const existing = counts.get(tag.slug);
-      if (existing) {
-        existing.count += 1;
-      } else {
-        counts.set(tag.slug, { title: tag.title, slug: tag.slug, count: 1 });
-      }
-    }
-  }
-
-  return Array.from(counts.values()).sort((a, b) => b.count - a.count).slice(0, limit);
-}
-
-/** Small reusable section header: mono kicker + gradient-accented headline. */
 function SectionHeader({
   kicker,
   title,
@@ -118,14 +93,14 @@ function SectionHeader({
   );
 }
 
-export default function ArticleGrid() {
-  const sorted = [...POSTS].sort(
+export default async function ArticleGrid() {
+  const [posts, categories] = await Promise.all([getAllPosts(), getAllCategories()]);
+
+  const sorted = [...posts].sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   );
 
-  // Top 3 = featured (with imagery).
   const featured = sorted.slice(0, 3);
-  const popularTags = getPopularTags();
 
   return (
     <section className="relative py-20 md:py-28 border-b border-border overflow-hidden">
@@ -145,14 +120,12 @@ export default function ArticleGrid() {
         }
       `}</style>
 
-      {/* Ambient blurred backdrop, echoing the Hero's blue glow */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-1/4 -left-32 h-[24rem] w-[24rem] rounded-full bg-[#1A4FD6]/15 blur-[130px]" />
         <div className="absolute bottom-0 -right-32 h-[26rem] w-[26rem] rounded-full bg-[#0A1F44]/15 blur-[140px]" />
       </div>
 
       <div className="mx-auto max-w-7xl px-6 sm:px-8">
-        {/* Featured articles */}
         <SectionHeader
           kicker="Featured stories"
           title="Our latest deep dives"
@@ -168,13 +141,15 @@ export default function ArticleGrid() {
               style={{ animationDelay: `${i * 120}ms` }}
             >
               <div className="relative aspect-[16/10] overflow-hidden">
-                <Image
-                  src={post.coverImage.url}
-                  alt={post.coverImage.alt}
-                  fill
-                  priority={i === 0}
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
-                />
+                {post.coverImage?.url && (
+                  <Image
+                    src={post.coverImage.url}
+                    alt={post.coverImage.alt ?? post.title}
+                    fill
+                    priority={i === 0}
+                    className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-70 group-hover:opacity-90 transition-opacity duration-300" />
                 <span className="absolute top-4 left-4 font-mono text-[10px] tracking-widest uppercase bg-accent text-white px-2.5 py-1 rounded-full shadow-lg shadow-accent/30">
                   Featured
@@ -183,7 +158,7 @@ export default function ArticleGrid() {
 
               <div className="p-6">
                 <div className="flex items-center gap-3 text-xs mb-3">
-                  <span className="font-mono text-muted-foreground">{post.category.title}</span>
+                  <span className="font-mono text-muted-foreground">{post.category?.title}</span>
                   <span className="text-muted-foreground">•</span>
                   <time dateTime={post.publishedAt} className="font-mono text-muted-foreground">
                     {formatDate(post.publishedAt)}
@@ -206,8 +181,6 @@ export default function ArticleGrid() {
           ))}
         </div>
 
-        {/* Explore by category — the grid ends with a 6th "Browse All Topics"
-            card so the CTA lives inside the grid instead of below it. */}
         <SectionHeader
           kicker="Explore by category"
           title="Find what's relevant to your business"
@@ -215,7 +188,7 @@ export default function ArticleGrid() {
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-24">
-          {CATEGORIES.map((category, i) => {
+          {categories.map((category, i) => {
             const Icon = CATEGORY_ICONS[category.slug] ?? Folder;
             return (
               <Link
@@ -224,7 +197,6 @@ export default function ArticleGrid() {
                 className="group relative rounded-2xl border border-border bg-card p-8 overflow-hidden dth-fade-in-up opacity-0 transition-all duration-300 hover:-translate-y-1.5 hover:border-accent/30 hover:shadow-2xl hover:shadow-accent/[0.1]"
                 style={{ animationDelay: `${i * 90}ms` }}
               >
-                {/* Soft accent wash on hover */}
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/[0.06] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 <div className="relative">
@@ -249,12 +221,10 @@ export default function ArticleGrid() {
             );
           })}
 
-          {/* 6th card: image-backed "Browse All Topics" CTA, with a bouncy
-              pop-out hover instead of the flat lift used on the other cards. */}
           <Link
             href="/category"
             className="dth-pop group relative flex flex-col items-center justify-center text-center rounded-2xl border border-border overflow-hidden min-h-[280px] dth-fade-in-up opacity-0 hover:shadow-2xl hover:shadow-accent/30"
-            style={{ animationDelay: `${CATEGORIES.length * 90}ms` }}
+            style={{ animationDelay: `${categories.length * 90}ms` }}
           >
             <Image
               src="/dth16.png"
@@ -281,7 +251,6 @@ export default function ArticleGrid() {
           </Link>
         </div>
 
-        {/* Follow us / social */}
         <SectionHeader kicker="Follow us" title="Stay connected beyond the blog" />
 
         <div
@@ -292,28 +261,25 @@ export default function ArticleGrid() {
 
           <p className="relative text-sm text-muted-foreground max-w-md">
             Follow @discoverytechhub for behind-the-scenes updates, quick tips, and
-            announcements we don't always turn into full articles.
-            {/*
-              TODO: Replace this static panel with a live embed once API access
-              is set up — e.g. Instagram Basic Display API, or a third-party
-              embed widget (SnapWidget, Elfsight, EmbedSocial). Swap this whole
-              block for the widget's iframe/script per that provider's docs.
-            */}
+            announcements we don&apos;t always turn into full articles.
           </p>
 
           <div className="relative flex items-center gap-3">
-            {SOCIAL_LINKS.map((social) => (
-              <a
-                key={social.name}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={social.name}
-                className="inline-flex items-center justify-center w-11 h-11 rounded-xl border border-border text-primary dark:text-white transition-all duration-300 hover:border-accent/40 hover:bg-accent hover:text-white hover:-translate-y-1 hover:shadow-lg hover:shadow-accent/25"
-              >
-                <social.icon className="w-5 h-5" />
-              </a>
-            ))}
+            {SOCIAL_LINKS.map((social) => {
+              const SocialIcon = social.icon;
+              return (
+                <a
+                  key={social.name}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.name}
+                  className="inline-flex items-center justify-center w-11 h-11 rounded-xl border border-border text-primary dark:text-white transition-all duration-300 hover:border-accent/40 hover:bg-accent hover:text-white hover:-translate-y-1 hover:shadow-lg hover:shadow-accent/25"
+                >
+                  <SocialIcon className="w-5 h-5" />
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>

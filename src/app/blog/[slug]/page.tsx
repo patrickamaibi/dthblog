@@ -1,7 +1,13 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { POSTS, formatDate, getRelatedPosts } from "@/lib/data";
+import { PortableText } from "@portabletext/react";
+import {
+  getPostBySlug,
+  getAllPosts,
+  getRelatedPosts,
+  formatDate,
+} from "@/sanity/lib/queries";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,9 +23,10 @@ import {
 } from "lucide-react";
 import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
+export const revalidate = 0; // always fetch fresh data from Sanity, never cache
 
 // Kept in sync with ArticleGrid.tsx and both /category pages —
-// slugs match the real Category.slug values in lib/data.ts.
+// slugs match the real Category.slug values.
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
   branding: Palette,
@@ -33,7 +40,8 @@ const CATEGORY_ICONS: Record<string, typeof Folder> = {
 type PageParams = { slug: string };
 
 export async function generateStaticParams() {
-  return POSTS.map((p) => ({ slug: p.slug }));
+  const posts = await getAllPosts();
+  return posts.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -42,7 +50,7 @@ export async function generateMetadata({
   params: Promise<PageParams>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const post = POSTS.find((p) => p.slug === slug);
+  const post = await getPostBySlug(slug);
   if (!post) return {};
 
   return {
@@ -58,13 +66,15 @@ export async function generateMetadata({
       publishedTime: post.publishedAt,
       authors: [post.author.name],
       url: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-      images: [{ url: post.coverImage.url, width: 1920, height: 823, alt: post.coverImage.alt }],
+      images: post.coverImage?.url
+        ? [{ url: post.coverImage.url, width: 1920, height: 823, alt: post.coverImage.alt }]
+        : [],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.excerpt,
-      images: [post.coverImage.url],
+      images: post.coverImage?.url ? [post.coverImage.url] : [],
     },
   };
 }
@@ -75,18 +85,18 @@ export default async function BlogPostPage({
   params: Promise<PageParams>;
 }) {
   const { slug } = await params;
-  const post = POSTS.find((p) => p.slug === slug);
+  const post = await getPostBySlug(slug);
   if (!post) notFound();
 
-  const Icon = CATEGORY_ICONS[post.category.slug] ?? Folder;
-  const related = getRelatedPosts(post.slug, post.category.slug, 3);
+  const Icon = CATEGORY_ICONS[post.category?.slug] ?? Folder;
+  const related = await getRelatedPosts(post.slug, post.category?.slug ?? "", 3);
 
   const articleJsonLd = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: post.title,
     description: post.excerpt,
-    image: post.coverImage.url,
+    image: post.coverImage?.url,
     datePublished: post.publishedAt,
     author: { "@type": "Person", name: post.author.name },
     publisher: {
@@ -106,28 +116,30 @@ export default async function BlogPostPage({
 
       {/* ---------- Magazine-style header: image beside title/meta ---------- */}
       <div className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
-        {/* Ambient brand glow, consistent with category pages */}
         <div className="pointer-events-none absolute -top-24 -right-32 w-96 h-96 rounded-full bg-[#1A4FD6]/10 dark:bg-[#1A4FD6]/15 blur-[120px]" />
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
-          <Link
-            href={`/category/${post.category.slug}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-accent transition-colors mb-10 group"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            {post.category.title}
-          </Link>
+          {post.category && (
+            <Link
+              href={`/category/${post.category.slug}`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-accent transition-colors mb-10 group"
+            >
+              <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+              {post.category.title}
+            </Link>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-            {/* Left: kicker, title, excerpt, meta */}
             <div className="dth-fade-in-up opacity-0">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-9 h-9 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
                   <Icon className="w-4 h-4 text-accent" />
                 </div>
-                <p className="font-mono text-xs tracking-widest uppercase text-accent">
-                  <span>§</span> {post.category.title}
-                </p>
+                {post.category && (
+                  <p className="font-mono text-xs tracking-widest uppercase text-accent">
+                    <span>§</span> {post.category.title}
+                  </p>
+                )}
               </div>
 
               <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-primary dark:text-white leading-[1.1] mb-6">
@@ -161,19 +173,20 @@ export default async function BlogPostPage({
               </div>
             </div>
 
-            {/* Right: cover image */}
             <div
               className="dth-fade-in-up opacity-0 relative aspect-[4/3] rounded-2xl overflow-hidden border border-border shadow-2xl shadow-accent/10"
               style={{ animationDelay: "100ms" }}
             >
-              <Image
-                src={post.coverImage.url}
-                alt={post.coverImage.alt}
-                fill
-                priority
-                sizes="(min-width: 1024px) 50vw, 100vw"
-                className="object-cover"
-              />
+              {post.coverImage?.url && (
+                <Image
+                  src={post.coverImage.url}
+                  alt={post.coverImage.alt ?? post.title}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover"
+                />
+              )}
               <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
             </div>
           </div>
@@ -184,16 +197,18 @@ export default async function BlogPostPage({
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 lg:gap-16">
-            {/* Main content */}
             <article
               className="prose prose-lg max-w-none dth-fade-in-up opacity-0"
               style={{ animationDelay: "150ms" }}
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            >
+              {post.isStatic ? (
+                <div dangerouslySetInnerHTML={{ __html: post.htmlContent ?? "" }} />
+              ) : (
+                <PortableText value={post.body} />
+              )}
+            </article>
 
-            {/* Sidebar */}
             <aside className="lg:sticky lg:top-24 self-start space-y-8 dth-fade-in-up opacity-0" style={{ animationDelay: "200ms" }}>
-              {/* Author bio card */}
               <div className="rounded-2xl border border-border bg-card p-6">
                 <p className="font-mono text-xs tracking-widest uppercase text-accent mb-4">
                   <span>§</span> Written by
@@ -216,8 +231,7 @@ export default async function BlogPostPage({
                 <p className="text-sm text-muted-foreground leading-relaxed">{post.author.bio}</p>
               </div>
 
-              {/* Tags */}
-              {post.tags.length > 0 && (
+              {post.tags?.length > 0 && (
                 <div className="rounded-2xl border border-border bg-card p-6">
                   <p className="font-mono text-xs tracking-widest uppercase text-accent mb-4">
                     <span>§</span> Tagged
@@ -235,7 +249,6 @@ export default async function BlogPostPage({
                 </div>
               )}
 
-              {/* Related posts */}
               {related.length > 0 && (
                 <div className="rounded-2xl border border-border bg-card p-6">
                   <p className="font-mono text-xs tracking-widest uppercase text-accent mb-5">
@@ -249,13 +262,15 @@ export default async function BlogPostPage({
                         className="group flex gap-3 items-start"
                       >
                         <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border shrink-0">
-                          <Image
-                            src={rp.coverImage.url}
-                            alt={rp.coverImage.alt}
-                            fill
-                            sizes="64px"
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
+                          {rp.coverImage?.url && (
+                            <Image
+                              src={rp.coverImage.url}
+                              alt={rp.coverImage.alt ?? rp.title}
+                              fill
+                              sizes="64px"
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          )}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-primary dark:text-white leading-snug line-clamp-2 group-hover:text-accent transition-colors">

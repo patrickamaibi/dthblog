@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { POSTS, CATEGORIES, formatDate } from "@/lib/data";
+import { getAllCategories, getCategoryBySlug, getPostsByCategory, formatDate } from "@/sanity/lib/queries";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,8 +17,10 @@ import {
 import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
 
+export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+
 // Kept in sync with ArticleGrid.tsx and /category/page.tsx —
-// slugs match the real Category.slug values in lib/data.ts.
+// slugs match the real Category.slug values.
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
   branding: Palette,
@@ -32,7 +34,8 @@ const CATEGORY_ICONS: Record<string, typeof Folder> = {
 type PageParams = { slug: string };
 
 export async function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ slug: c.slug }));
+  const categories = await getAllCategories();
+  return categories.map((c) => ({ slug: c.slug }));
 }
 
 export async function generateMetadata({
@@ -41,14 +44,11 @@ export async function generateMetadata({
   params: Promise<PageParams>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const category = CATEGORIES.find((c) => c.slug === slug);
+  const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
-  // Category has no coverImage of its own — borrow the most recent post's cover
-  // in this category so link previews still get an image.
-  const heroPost = POSTS.filter((p) => p.category.slug === category.slug).sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  )[0];
+  const posts = await getPostsByCategory(category.slug);
+  const heroPost = posts[0];
 
   return {
     title: `${category.title} — DiscoveryTech Hub Blog`,
@@ -61,13 +61,13 @@ export async function generateMetadata({
       description: category.description,
       type: "website",
       url: `https://blog.discoverytechhub.com/category/${category.slug}`,
-      images: heroPost ? [{ url: heroPost.coverImage.url, width: 1920, height: 823, alt: heroPost.coverImage.alt }] : [],
+      images: heroPost?.coverImage?.url
+        ? [{ url: heroPost.coverImage.url, width: 1920, height: 823, alt: heroPost.coverImage.alt }]
+        : [],
     },
   };
 }
 
-// Same fixed mesh layout used on the /category index hero, so the two pages
-// read as one visual family instead of two different treatments.
 const MESH_NODES = [
   { x: 8, y: 22 }, { x: 22, y: 55 }, { x: 15, y: 82 },
   { x: 38, y: 15 }, { x: 42, y: 48 }, { x: 35, y: 78 },
@@ -127,18 +127,14 @@ export default async function CategoryPage({
   params: Promise<PageParams>;
 }) {
   const { slug } = await params;
-  const category = CATEGORIES.find((c) => c.slug === slug);
+  const category = await getCategoryBySlug(slug);
   if (!category) notFound();
 
-  const posts = POSTS.filter((p) => p.category.slug === category.slug).sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  );
+  const posts = await getPostsByCategory(category.slug);
 
   const Icon = CATEGORY_ICONS[category.slug] ?? Folder;
 
-  // Category has no dedicated banner field — use the most recent post's cover
-  // so every category still gets a hero image.
-  const heroImage = posts[0]?.coverImage;
+  const heroImage = category.heroImage?.url ? category.heroImage : posts[0]?.coverImage;
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
@@ -160,16 +156,12 @@ export default async function CategoryPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
       />
 
-      {/* Editorial hero — cinematic crop + a subtle animated network mesh
-          layered over the post's cover image for a more premium, less
-          "stock photo" feel. Falls back to a brand gradient + mesh only
-          when the category has no posts yet. */}
       <div className="relative w-full aspect-[21/9] mt-20 overflow-hidden">
-        {heroImage ? (
+        {heroImage?.url ? (
           <div className="absolute inset-0 overflow-hidden">
             <Image
               src={heroImage.url}
-              alt={heroImage.alt}
+              alt={heroImage.alt ?? category.title}
               fill
               priority
               sizes="100vw"
@@ -184,8 +176,7 @@ export default async function CategoryPage({
 
         <div className="absolute inset-0 bg-gradient-to-t from-primary/85 dark:from-black/90 via-primary/25 dark:via-black/40 to-transparent" />
 
-        {/* Ambient brand-color wash, matching the Hero component's backdrop treatment */}
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
 
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 pb-12 md:pb-16">
@@ -249,13 +240,15 @@ export default async function CategoryPage({
                 >
                   <Link href={`/blog/${post.slug}`}>
                     <div className="relative w-full aspect-[3/2] overflow-hidden">
-                      <Image
-                        src={post.coverImage.url}
-                        alt={post.coverImage.alt}
-                        fill
-                        sizes="(min-width: 768px) 33vw, 100vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
+                      {post.coverImage?.url && (
+                        <Image
+                          src={post.coverImage.url}
+                          alt={post.coverImage.alt}
+                          fill
+                          sizes="(min-width: 768px) 33vw, 100vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      )}
                     </div>
                     <div className="p-6">
                       <div className="flex items-center gap-3 font-mono text-xs text-muted-foreground mb-3">

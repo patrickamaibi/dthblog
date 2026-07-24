@@ -1,6 +1,6 @@
 ﻿import Link from "next/link";
 import Image from "next/image";
-import { POSTS, CATEGORIES } from "@/lib/data";
+import { getAllCategories, getAllPosts } from "@/sanity/lib/queries";
 import {
   ArrowRight,
   Bot,
@@ -15,8 +15,10 @@ import {
 import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
 
-// Kept in sync with ArticleGrid.tsx and /category/[slug]/page.tsx, 
-// slugs match the real Category.slug values in lib/data.ts.
+export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+
+// Kept in sync with ArticleGrid.tsx and /category/[slug]/page.tsx,
+// slugs match the real Category.slug values.
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
   branding: Palette,
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Hand-placed node positions and edges (percentages of the hero box), 
+// Hand-placed node positions and edges (percentages of the hero box),
 // deliberately fixed rather than randomized so the mesh reads as designed.
 const MESH_NODES = [
   { x: 8, y: 22 }, { x: 22, y: 55 }, { x: 15, y: 82 },
@@ -90,17 +92,19 @@ function HeroMesh() {
   );
 }
 
-export default function CategoryIndexPage() {
+export default async function CategoryIndexPage() {
+  const [categories, posts] = await Promise.all([getAllCategories(), getAllPosts()]);
+
   const counts = Object.fromEntries(
-    CATEGORIES.map((c) => [c.slug, POSTS.filter((p) => p.category.slug === c.slug).length])
+    categories.map((c) => [c.slug, posts.filter((p) => p.category?.slug === c.slug).length])
   );
 
   const latestCoverByCategory = Object.fromEntries(
-    CATEGORIES.map((c) => {
-      const latest = POSTS.filter((p) => p.category.slug === c.slug).sort(
-        (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      )[0];
-      return [c.slug, latest?.coverImage ?? null];
+    categories.map((c) => {
+      const latest = posts
+        .filter((p) => p.category?.slug === c.slug)
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())[0];
+      return [c.slug, c.heroImage?.url ? c.heroImage : (latest?.coverImage ?? null)];
     })
   );
 
@@ -125,13 +129,13 @@ export default function CategoryIndexPage() {
 
         <HeroMesh />
         <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#1A4FD6]/40 blur-[100px]" />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-[#0A1F44]/60 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96rounded-full bg-[#0A1F44]/60 blur-[100px]" />
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
           <p className="font-mono text-xs tracking-widest uppercase text-white/70 mb-5">
            <span className="text-accent">§</span> Browse
           </p>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1.05] max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighttext-white leading-[1.05] max-w-2xl">
             Topics
           </h1>
           <p className="mt-5 text-base sm:text-lg text-white/75 leading-relaxed max-w-xl">
@@ -143,7 +147,7 @@ export default function CategoryIndexPage() {
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <div className="pt-16 md:pt-20 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {CATEGORIES.map((category, i) => {
+            {categories.map((category, i) => {
               const Icon = CATEGORY_ICONS[category.slug] ?? Folder;
               const count = counts[category.slug] ?? 0;
               const cover = latestCoverByCategory[category.slug];
@@ -156,10 +160,10 @@ export default function CategoryIndexPage() {
                   className="dth-fade-in-up opacity-0 group relative rounded-2xl border border-border bg-card overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-accent/10 hover:border-accent/30"
                 >
                   <div className="relative w-full aspect-[16/9] overflow-hidden">
-                    {cover ? (
+                    {cover?.url ? (
                       <Image
                         src={cover.url}
-                        alt={cover.alt}
+                        alt={cover.alt ?? category.title}
                         fill
                         sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
                         className="object-cover transition-transform duration-500 group-hover:scale-105"

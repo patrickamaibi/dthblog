@@ -13,18 +13,59 @@ function slugify(input: string) {
     .replace(/-+/g, "-");
 }
 
+// Parses **bold** segments within a single line of text into Portable Text spans.
+function parseInline(text: string, blockIndex: number) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g).filter((part) => part.length > 0);
+
+  if (parts.length === 0) {
+    return [{ _type: "span", _key: `span-${blockIndex}-0`, text: "", marks: [] }];
+  }
+
+  return parts.map((part, i) => {
+    const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+    return {
+      _type: "span",
+      _key: `span-${blockIndex}-${i}`,
+      text: isBold ? part.slice(2, -2) : part,
+      marks: isBold ? ["strong"] : [],
+    };
+  });
+}
+
+// Converts plain text (with lightweight markdown: "# " H1, "## " H2, "### " H3,
+// "**bold**") into Portable Text blocks. Paragraphs are separated by a blank line.
 function textToBlocks(text: string) {
   return text
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean)
-    .map((paragraph, i) => ({
-      _type: "block",
-      _key: `block-${i}`,
-      style: "normal",
-      markDefs: [],
-      children: [{ _type: "span", _key: `span-${i}`, text: paragraph, marks: [] }],
-    }));
+    .map((paragraph, i) => {
+      let style = "normal";
+      let content = paragraph;
+
+      const h3Match = paragraph.match(/^###\s+(.*)/);
+      const h2Match = paragraph.match(/^##\s+(.*)/);
+      const h1Match = paragraph.match(/^#\s+(.*)/);
+
+      if (h3Match) {
+        style = "h3";
+        content = h3Match[1];
+      } else if (h2Match) {
+        style = "h2";
+        content = h2Match[1];
+      } else if (h1Match) {
+        style = "h1";
+        content = h1Match[1];
+      }
+
+      return {
+        _type: "block",
+        _key: `block-${i}`,
+        style,
+        markDefs: [],
+        children: parseInline(content, i),
+      };
+    });
 }
 
 async function resolveTagIds(tagTitles: string[]): Promise<string[]> {
@@ -91,13 +132,13 @@ export async function createPost(formData: FormData) {
     title,
     slug: { current: slug },
     excerpt,
-    content: textToBlocks(contentText),
+    body: textToBlocks(contentText),
     publishedAt: new Date(publishedAt).toISOString(),
     readTime,
-    category: { _type: "reference", _ref: categoryId },
+    categories: [{ _type: "reference", _ref: categoryId, _key: categoryId }],
     author: { _type: "reference", _ref: authorId },
     tags: tagIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
-    coverImage: {
+    mainImage: {
       _type: "image",
       asset: { _type: "reference", _ref: coverAsset._id },
       alt: coverImageAlt || title,
@@ -129,20 +170,20 @@ export async function updatePost(postId: string, formData: FormData) {
     title,
     slug: { current: slug },
     excerpt,
-    content: textToBlocks(contentText),
+    body: textToBlocks(contentText),
     publishedAt: new Date(publishedAt).toISOString(),
     readTime,
-    category: { _type: "reference", _ref: categoryId },
+    categories: [{ _type: "reference", _ref: categoryId, _key: categoryId }],
     author: { _type: "reference", _ref: authorId },
     tags: tagIds.map((id) => ({ _type: "reference", _ref: id, _key: id })),
-    ...(coverImageAlt ? { "coverImage.alt": coverImageAlt } : {}),
+    ...(coverImageAlt ? { "mainImage.alt": coverImageAlt } : {}),
   });
 
   const coverAsset = await uploadCoverImageIfProvided(formData);
   if (coverAsset) {
     await patch
       .set({
-        coverImage: {
+        mainImage: {
           _type: "image",
           asset: { _type: "reference", _ref: coverAsset._id },
           alt: coverImageAlt || title,

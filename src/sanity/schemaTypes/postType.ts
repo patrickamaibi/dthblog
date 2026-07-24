@@ -1,11 +1,15 @@
-import {DocumentTextIcon} from '@sanity/icons'
+import {Icon} from '@sanity/icons'
 import {defineArrayMember, defineField, defineType} from 'sanity'
+import {createElement} from 'react'
+
+const PostIcon = (props: Record<string, unknown>) =>
+  createElement(Icon, {...props, symbol: 'document-text'})
 
 export const postType = defineType({
   name: 'post',
   title: 'Post',
   type: 'document',
-  icon: DocumentTextIcon,
+  icon: PostIcon,
   fields: [
     defineField({
       name: 'title',

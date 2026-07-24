@@ -106,7 +106,7 @@ export const CATEGORIES: Category[] = [
 // with the single source of truth above.
 const catBySlug = Object.fromEntries(CATEGORIES.map((c) => [c.slug, c])) as Record<string, Category>;
 
-const TAGS = {
+export const TAGS = {
   ai: { title: "AI", slug: "ai" },
   automation: { title: "Automation", slug: "automation" },
   sme: { title: "SMEs", slug: "sme" },
@@ -324,7 +324,7 @@ export const POSTS: Post[] = [
       <h2>A short evaluation checklist</h2>
       <p>Before signing anything: confirm data export is straightforward and documented; pilot on one workflow with a defined metric for a fixed trial period; test the escalation/failure path directly rather than trusting the demo; and confirm what support actually looks like once the trial ends. None of this eliminates risk entirely every vendor choice carries some but it substantially reduces the odds of ending up locked into a system that's stopped serving the business a year in.</p>
     `,
-    publishedAt: "2026-07-02T09:00:00.000Z",
+    publishedAt: "2026-07-23T09:00:00.000Z",
     readTime: 6,
     category: catBySlug["ai-automation"],
     tags: [TAGS.ai, TAGS.automation, TAGS.strategy],
