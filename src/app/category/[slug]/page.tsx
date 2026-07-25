@@ -156,7 +156,7 @@ export default async function CategoryPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
       />
 
-      <div className="relative w-full mt-20 overflow-hidden min-h-[560px] sm:min-h-0 sm:aspect-[21/9]">
+      <div className="relative w-full mt-20 overflow-hidden min-h-[400px] sm:min-h-0 sm:aspect-[21/9]">
         {heroImage?.url ? (
           <div className="absolute inset-0 overflow-hidden">
             <Image
@@ -176,7 +176,7 @@ export default async function CategoryPage({
 
         <div className="absolute inset-0 bg-gradient-to-t from-primary/85 dark:from-black/90 via-primary/25 dark:via-black/40 to-transparent" />
 
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
 
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 pb-12 md:pb-16">
