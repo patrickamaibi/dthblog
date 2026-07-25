@@ -109,6 +109,13 @@ async function resolveAllTagIds(formData: FormData): Promise<string[]> {
   return Array.from(new Set([...checkedTagIds, ...createdTagIds]));
 }
 
+// Centralized so the public route pattern only needs to change in one place
+// if your blog's URL structure ever changes.
+function revalidatePublicPost(slug: string) {
+  revalidatePath(`/blog/${slug}`);
+  revalidatePath("/blog"); // listing/index page
+}
+
 export async function createPost(formData: FormData) {
   const title = getField(formData, "title");
   if (!title) {
@@ -161,6 +168,7 @@ export async function createPost(formData: FormData) {
   });
 
   revalidatePath("/admin");
+  revalidatePublicPost(slug);
   redirect("/admin?created=1");
 }
 
@@ -226,10 +234,24 @@ export async function updatePost(postId: string, formData: FormData) {
   await patch.commit();
 
   revalidatePath("/admin");
+  revalidatePublicPost(slug);
   redirect("/admin?updated=1");
 }
 
 export async function deletePost(postId: string) {
+  // Fetch the slug before deleting so we can still revalidate the now-gone
+  // post's page (important if your route isn't set up to 404 gracefully
+  // on stale cached content).
+  const post = await adminClient.fetch(`*[_id == $id][0]{ "slug": slug.current }`, {
+    id: postId,
+  });
+
   await adminClient.delete(postId);
+
   revalidatePath("/admin");
+  if (post?.slug) {
+    revalidatePublicPost(post.slug);
+  } else {
+    revalidatePath("/blog");
+  }
 }

@@ -115,6 +115,7 @@ async function resolveAllTagIds(formData: FormData): Promise<string[]> {
 function revalidatePublicPages() {
   revalidatePath("/admin");
   revalidatePath("/");
+  revalidatePath("/blog");
   revalidatePath("/category");
   revalidatePath("/search");
   revalidatePath("/category/[slug]", "page");
