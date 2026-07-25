@@ -57,7 +57,7 @@ export default async function EditPostPage({
           </Field>
 
           <Field label="Content">
-            <RichTextEditor {...({ name: "body", initialContent: post.body } as any)} />
+            <RichTextEditor name="body" initialContent={post.body} />
           </Field>
         </section>
 
@@ -147,7 +147,7 @@ export default async function EditPostPage({
 }
 
 const inputClass =
-  "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white";
+  "w-full rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white text-slate-900";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
