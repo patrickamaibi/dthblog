@@ -47,9 +47,6 @@ export async function generateMetadata({
   const category = await getCategoryBySlug(slug);
   if (!category) return {};
 
-  const posts = await getPostsByCategory(category.slug);
-  const heroPost = posts[0];
-
   return {
     title: `${category.title} — DiscoveryTech Hub Blog`,
     description: category.description,
@@ -61,8 +58,15 @@ export async function generateMetadata({
       description: category.description,
       type: "website",
       url: `https://blog.discoverytechhub.com/category/${category.slug}`,
-      images: heroPost?.coverImage?.url
-        ? [{ url: heroPost.coverImage.url, width: 1920, height: 823, alt: heroPost.coverImage.alt }]
+      images: category.heroImage?.url
+        ? [
+            {
+              url: category.heroImage.url,
+              width: 1920,
+              height: 823,
+              alt: category.heroImage.alt ?? category.title,
+            },
+          ]
         : [],
     },
   };
@@ -134,7 +138,9 @@ export default async function CategoryPage({
 
   const Icon = CATEGORY_ICONS[category.slug] ?? Folder;
 
-  const heroImage = category.heroImage?.url ? category.heroImage : posts[0]?.coverImage;
+  // Fixed to the category's own heroImage only — never falls back to a
+  // post's cover image, so the hero won't shift when new posts are added.
+  const heroImage = category.heroImage;
 
   const collectionJsonLd = {
     "@context": "https://schema.org",
@@ -176,7 +182,7 @@ export default async function CategoryPage({
 
         <div className="absolute inset-0 bg-gradient-to-t from-primary/85 dark:from-black/90 via-primary/25 dark:via-black/40 to-transparent" />
 
-        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-24 -left-24 w-96 h-96 rounded-full bg-[#1A4FD6]/30 blur-[100px]" />
 
         <div className="absolute inset-0 flex items-end">
           <div className="mx-auto w-full max-w-7xl px-6 sm:px-8 pb-12 md:pb-16">
