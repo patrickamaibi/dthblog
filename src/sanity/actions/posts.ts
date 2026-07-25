@@ -161,7 +161,7 @@ export async function createPost(formData: FormData) {
   });
 
   revalidatePath("/admin");
-  redirect("/admin");
+  redirect("/admin?created=1");
 }
 
 export async function updatePost(postId: string, formData: FormData) {
@@ -226,7 +226,7 @@ export async function updatePost(postId: string, formData: FormData) {
   await patch.commit();
 
   revalidatePath("/admin");
-  redirect("/admin");
+  redirect("/admin?updated=1");
 }
 
 export async function deletePost(postId: string) {

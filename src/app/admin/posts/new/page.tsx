@@ -18,7 +18,7 @@ export default async function NewPostPage() {
     <div className="mx-auto max-w-3xl">
       <h1 className="mb-6 text-2xl font-bold text-slate-900">New post</h1>
 
-      <form action={createPost} encType="multipart/form-data" className="space-y-6">
+      <form action={createPost} className="space-y-6">
         <section className="space-y-5 rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-sm backdrop-blur">
           <Field label="Title">
             <input name="title" required className={inputClass} />

@@ -3,11 +3,22 @@ import Link from "next/link";
 import { getAllPostsForAdmin } from "@/lib/sanity/adminQueries";
 import { deletePost } from "@/lib/actions/posts";
 
-export default async function AdminDashboard() {
+export default async function AdminDashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; updated?: string }>;
+}) {
   const posts = await getAllPostsForAdmin();
+  const { created, updated } = await searchParams;
 
   return (
     <div>
+      {(created || updated) && (
+        <div className="mb-4 rounded-lg border border-green-300 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+          {created ? "✓ Post published successfully" : "✓ Post updated successfully"}
+        </div>
+      )}
+
       <h1 className="text-2xl font-bold text-slate-900 mb-4">All posts</h1>
 
       <div className="mb-6">
