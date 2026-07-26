@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { PortableText } from "@portabletext/react";
+import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import {
   getPostBySlug,
   getAllPosts,
@@ -25,8 +25,6 @@ import type { Metadata } from "next";
 import NewsletterPopup from "@/components/NewsletterPopup";
 export const revalidate = 0; // always fetch fresh data from Sanity, never cache
 
-// Kept in sync with ArticleGrid.tsx and both /category pages —
-// slugs match the real Category.slug values.
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
   branding: Palette,
@@ -35,6 +33,34 @@ const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ict-training": GraduationCap,
   web3: Blocks,
   others: Sparkles,
+};
+
+const portableTextComponents: PortableTextComponents = {
+  types: {
+    image: ({ value }) => {
+      if (!value?.asset?.url) return null;
+      return (
+        <figure className="my-8 not-prose">
+          <div className="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-border">
+            <Image
+              src={value.asset.url}
+              alt={value.alt || ""}
+              fill
+              className="object-cover"
+              sizes="(min-width: 1024px) 800px, 100vw"
+            />
+          </div>
+        </figure>
+      );
+    },
+  },
+  block: {
+    blockquote: ({ children }) => (
+      <blockquote className="border-l-4 border-accent/50 pl-6 italic text-muted-foreground my-8 not-prose">
+        {children}
+      </blockquote>
+    ),
+  },
 };
 
 type PageParams = { slug: string };
@@ -53,9 +79,6 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
-  // Request the Sanity image pre-cropped to the actual OG ratio (1200x630),
-  // instead of trusting whatever aspect ratio the original upload happens to be.
-  // Falls back to the site-wide /og.png if this post has no cover image.
   const ogImageUrl = post.coverImage?.url
     ? `${post.coverImage.url}?w=1200&h=630&fit=crop&auto=format`
     : "/og.png";
@@ -126,7 +149,6 @@ export default async function BlogPostPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
 
-      {/* ---------- Magazine-style header: image beside title/meta ---------- */}
       <div className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
         <div className="pointer-events-none absolute -top-24 -right-32 w-96 h-96 rounded-full bg-[#1A4FD6]/10 dark:bg-[#1A4FD6]/15 blur-[120px]" />
 
@@ -205,7 +227,6 @@ export default async function BlogPostPage({
         </div>
       </div>
 
-      {/* ---------- Body: content + sidebar ---------- */}
       <section className="pb-24">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 lg:gap-16">
@@ -216,7 +237,7 @@ export default async function BlogPostPage({
               {post.isStatic ? (
                 <div dangerouslySetInnerHTML={{ __html: post.htmlContent ?? "" }} />
               ) : (
-                <PortableText value={post.body} />
+                <PortableText value={post.body} components={portableTextComponents} />
               )}
             </article>
 

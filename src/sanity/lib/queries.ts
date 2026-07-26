@@ -148,7 +148,12 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
       title,
       "slug": slug.current,
       excerpt,
-      body,
+      "body": body[]{
+        ...,
+        _type == "image" => {
+          "asset": asset->
+        }
+      },
       publishedAt,
       readTime,
       "category": categories[0]->{
