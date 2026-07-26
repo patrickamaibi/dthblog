@@ -390,7 +390,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.security, TAGS.compliance, TAGS.sme, TAGS.nigeria],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/dth22.jpg",
+      url: "/dth22.png",
       alt: "Close-up of a hand reviewing a data privacy compliance document at a desk",
     },
   },
