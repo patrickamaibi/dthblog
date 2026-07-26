@@ -184,7 +184,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.security, TAGS.sme, TAGS.nigeria],
     author: AUTHORS.patrick,
     coverImage: {
-      url: "/dth6.png",
+      url: "/dth21.png",
       alt: "Server room with rows of illuminated data racks representing IT infrastructure security",
     },
   },
@@ -270,7 +270,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.training, TAGS.sme],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/dth9.png",
+      url: "/dth19.png",
       alt: "Small group of professionals collaborating around a laptop during a training session",
     },
   },
@@ -390,7 +390,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.security, TAGS.compliance, TAGS.sme, TAGS.nigeria],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/dth13.jpg",
+      url: "/dth22.jpg",
       alt: "Close-up of a hand reviewing a data privacy compliance document at a desk",
     },
   },
@@ -481,7 +481,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.web3, TAGS.blockchain, TAGS.strategy],
     author: AUTHORS.patrick,
     coverImage: {
-      url: "/dth6.png",
+      url: "/dth20.png",
       alt: "Abstract visualization of a distributed blockchain network with connected nodes",
     },
   },

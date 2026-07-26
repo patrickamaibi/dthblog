@@ -1,5 +1,6 @@
 import {TagIcon} from '@sanity/icons/Tag'
 import {defineField, defineType} from 'sanity'
+
 export const categoryType = defineType({
   name: 'category',
   title: 'Category',
@@ -25,7 +26,8 @@ export const categoryType = defineType({
       name: 'heroImage',
       title: 'Hero Image',
       type: 'image',
-      description: 'Fixed banner image for this category page. Falls back to the latest post\'s cover image if left empty.',
+      description:
+        "Fixed banner image for this category page. Falls back to the latest post's cover image if left empty.",
       options: {
         hotspot: true,
       },
@@ -37,5 +39,25 @@ export const categoryType = defineType({
         }),
       ],
     }),
+    defineField({
+      name: 'order',
+      title: 'Display order',
+      type: 'number',
+      description:
+        'Controls the position on the /category page. Lower numbers show first (e.g. 1, 2, 3...).',
+      validation: (Rule) => Rule.required().integer(),
+    }),
   ],
+  preview: {
+    select: {
+      title: 'title',
+      subtitle: 'order',
+    },
+    prepare({title, subtitle}) {
+      return {
+        title,
+        subtitle: subtitle !== undefined ? `Order: ${subtitle}` : 'No order set',
+      }
+    },
+  },
 })
