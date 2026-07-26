@@ -211,7 +211,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.webdesign, TAGS.startups, TAGS.strategy],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/dth7.png",
+      url: "/dth24.png",
       alt: "Developer reviewing website layout and code across two monitors",
     },
   },
@@ -330,7 +330,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.ai, TAGS.automation, TAGS.strategy],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/dth9.png",
+      url: "/dth25.png",
       alt: "Team reviewing a vendor comparison chart on a laptop screen in a meeting",
     },
   },
@@ -450,7 +450,7 @@ export const POSTS: Post[] = [
     tags: [TAGS.training, TAGS.mentorship, TAGS.sme],
     author: AUTHORS.dth,
     coverImage: {
-      url: "/hero3.png",
+      url: "/dth23.png",
       alt: "Senior and junior colleague reviewing code together on a shared monitor",
     },
   },
