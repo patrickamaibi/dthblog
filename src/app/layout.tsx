@@ -1,9 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { ThemeProvider } from "@/components/ThemeProvider";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import CookieBanner from "@/components/CookieBanner";
-import Analytics from "@/components/Analytics";
 import "./globals.css";
 
 // System font stacks used in place of next/font/google (Inter, JetBrains Mono).
@@ -16,8 +11,6 @@ const fontVariables = {
   "--font-jetbrains-mono":
     "ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace",
 } as React.CSSProperties;
-
-const GA_ID = "G-XXXXXXXXXX"; // ← Replace with real Measurement ID before launch
 
 export const viewport: Viewport = {
   themeColor: [
@@ -99,15 +92,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {/* GA4 only loads once CookieBanner records consent — see components/Analytics.tsx */}
-        <Analytics gaId={GA_ID} />
-
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Navbar />
-          <main className="flex-1 flex flex-col">{children}</main>
-          <Footer />
-          <CookieBanner />
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );
