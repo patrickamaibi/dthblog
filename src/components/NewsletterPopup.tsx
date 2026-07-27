@@ -1,7 +1,10 @@
-"use client";
+﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Mail } from "lucide-react";
+
+const SEEN_KEY = "dth-newsletter-intro-shown";
+const AUTO_OPEN_DELAY_MS = 2000;
 
 export default function NewsletterPopup() {
   const [open, setOpen] = useState(false);
@@ -9,9 +12,30 @@ export default function NewsletterPopup() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(false);
+  const [hasSeenIntro, setHasSeenIntro] = useState(true); // default true to avoid SSR flash of pulse
+
+  // On first mount (client only), check whether this visitor has ever
+  // seen the popup. If not, auto-open it once after a short delay so
+  // people learn what the floating envelope icon means.
+  useEffect(() => {
+    const seen = localStorage.getItem(SEEN_KEY);
+    if (!seen) {
+      setHasSeenIntro(false);
+      const timer = setTimeout(() => {
+        setOpen(true);
+      }, AUTO_OPEN_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  function markIntroSeen() {
+    localStorage.setItem(SEEN_KEY, "true");
+    setHasSeenIntro(true);
+  }
 
   function close() {
     setOpen(false);
+    markIntroSeen();
     // Reset submitted state after the close animation would finish, so the
     // form is fresh next time the icon is clicked.
     setTimeout(() => {
@@ -44,6 +68,7 @@ export default function NewsletterPopup() {
 
       setSubmitted(true);
       setEmail("");
+      markIntroSeen();
       setTimeout(close, 1800);
     } catch (err) {
       console.error(err);
@@ -57,11 +82,20 @@ export default function NewsletterPopup() {
     <>
       {/* ---------- Floating trigger icon ---------- */}
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          markIntroSeen();
+        }}
         aria-label="Subscribe to newsletter"
         className="fixed right-5 bottom-5 sm:right-8 sm:bottom-8 z-40 w-14 h-14 rounded-full bg-accent text-white shadow-lg shadow-accent/30 flex items-center justify-center hover:scale-110 hover:shadow-xl hover:shadow-accent/40 transition-all duration-300"
       >
-        <Mail className="w-5 h-5" />
+        {/* Pulsing ring — only visible until the visitor has interacted
+            with the popup for the first time. Draws the eye without
+            being permanently distracting. */}
+        {!hasSeenIntro && (
+          <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-75" />
+        )}
+        <Mail className="relative w-5 h-5" />
       </button>
 
       {/* ---------- Modal ---------- */}
@@ -120,7 +154,7 @@ export default function NewsletterPopup() {
               </>
             ) : (
               <div className="py-4 text-center">
-                <p className="text-lg font-semibold text-primary dark:text-white mb-1">You&apos;re in ??</p>
+                <p className="text-lg font-semibold text-primary dark:text-white mb-1">You&apos;re in 🎉</p>
                 <p className="text-sm text-muted-foreground">Thanks for subscribing.</p>
               </div>
             )}

@@ -15,7 +15,6 @@ import {
   Folder,
 } from "lucide-react";
 import type { Metadata } from "next";
-import NewsletterPopup from "@/components/NewsletterPopup";
 
 export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
@@ -271,8 +270,6 @@ export default async function CategoryPage({
           )}
         </div>
       </section>
-
-      <NewsletterPopup />
     </>
   );
 }

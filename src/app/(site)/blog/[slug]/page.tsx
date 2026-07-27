@@ -22,7 +22,6 @@ import {
   Clock,
 } from "lucide-react";
 import type { Metadata } from "next";
-import NewsletterPopup from "@/components/NewsletterPopup";
 export const revalidate = 0; // always fetch fresh data from Sanity, never cache
 
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
@@ -322,8 +321,6 @@ export default async function BlogPostPage({
           </div>
         </div>
       </section>
-
-      <NewsletterPopup />
     </>
   );
 }
