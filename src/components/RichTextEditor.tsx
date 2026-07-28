@@ -260,7 +260,7 @@ export function RichTextEditor({
 
   return (
     <div className="rounded-lg border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden bg-white">
-      <div className="flex items-center gap-1 border-b border-slate-200 bg-slate-50 px-2 py-1.5">
+      <div className="flex items-center gap-1 overflow-x-auto border-b border-slate-200 bg-slate-50 px-2 py-1.5">
         <ToolbarButton
           active={editor?.isActive("bold")}
           onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -317,7 +317,7 @@ export function RichTextEditor({
         >
           "
         </ToolbarButton>
-        <div className="mx-1 h-5 w-px bg-slate-300" />
+        <div className="mx-1 h-5 w-px bg-slate-300 shrink-0" />
         <ToolbarButton
           onClick={() => fileInputRef.current?.click()}
           label="Insert image"
@@ -354,7 +354,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       aria-label={label}
-      className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
+      className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
         active ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-200"
       }`}
     >

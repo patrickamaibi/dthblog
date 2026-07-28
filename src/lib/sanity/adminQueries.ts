@@ -1,7 +1,9 @@
 ﻿import { adminClient } from "./adminClient";
+
 export async function getAllTagsForAdmin() {
   return adminClient.fetch(`*[_type == "tag"] | order(title asc){ _id, title }`);
 }
+
 export async function getAllPostsForAdmin() {
   return adminClient.fetch(`
     *[_type == "post"] | order(publishedAt desc) {
@@ -9,9 +11,10 @@ export async function getAllPostsForAdmin() {
       title,
       "slug": slug.current,
       publishedAt,
-      "category": category->title,
+      status,
+      "category": categories[0]->title,
       "author": author->name,
-      "coverImageUrl": coverImage.asset->url
+      "coverImageUrl": mainImage.asset->url
     }
   `);
 }
@@ -24,14 +27,20 @@ export async function getPostByIdForAdmin(id: string) {
       title,
       "slug": slug.current,
       excerpt,
-      "contentText": pt::text(content),
+      "body": body[]{
+        ...,
+        _type == "image" => {
+          "asset": asset->
+        }
+      },
       publishedAt,
       readTime,
-      "categoryId": category->_id,
+      status,
+      "categoryIds": categories[]->_id,
       "authorId": author->_id,
-      "tagTitles": tags[]->title,
-      "coverImageUrl": coverImage.asset->url,
-      "coverImageAlt": coverImage.alt
+      "tagIds": tags[]->_id,
+      "coverImageUrl": mainImage.asset->url,
+      "coverImageAlt": mainImage.alt
     }
   `,
     { id }

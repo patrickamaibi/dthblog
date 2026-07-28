@@ -16,6 +16,19 @@ export const postType = defineType({
       type: 'string',
     }),
     defineField({
+      name: 'status',
+      title: 'Status',
+      type: 'string',
+      options: {
+        list: [
+          {title: 'Draft', value: 'draft'},
+          {title: 'Published', value: 'published'},
+        ],
+        layout: 'radio',
+      },
+      initialValue: 'draft',
+    }),
+    defineField({
       name: 'slug',
       type: 'slug',
       options: {
@@ -95,10 +108,16 @@ export const postType = defineType({
       title: 'title',
       author: 'author.name',
       media: 'mainImage',
+      status: 'status',
     },
     prepare(selection) {
-      const {author} = selection
-      return {...selection, subtitle: author && `by ${author}`}
+      const {author, status} = selection
+      return {
+        ...selection,
+        subtitle: [status === 'draft' ? 'Draft' : null, author && `by ${author}`]
+          .filter(Boolean)
+          .join(' · '),
+      }
     },
   },
 })

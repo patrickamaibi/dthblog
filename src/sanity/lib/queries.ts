@@ -127,7 +127,7 @@ function sortByDateDesc(posts: PostListItem[]): PostListItem[] {
 export async function getAllPosts(): Promise<PostListItem[]> {
   const sanityPosts: PostListItem[] = await client.fetch(
     /* groq */ `
-    *[_type == "post" && defined(slug.current) && publishedAt <= now()]
+    *[_type == "post" && defined(slug.current) && publishedAt <= now() && status == "published"]
       | order(publishedAt desc) ${POST_LIST_PROJECTION}
   `
   );
@@ -143,7 +143,7 @@ export async function getAllPosts(): Promise<PostListItem[]> {
 export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
   const sanityPost = await client.fetch(
     /* groq */ `
-    *[_type == "post" && slug.current == $slug && publishedAt <= now()][0] {
+    *[_type == "post" && slug.current == $slug && publishedAt <= now() && status == "published"][0] {
       _id,
       title,
       "slug": slug.current,
@@ -229,9 +229,6 @@ export async function getAllCategories(): Promise<Category[]> {
 
   const sanitySlugs = new Set(sanityCategories.map((c) => c.slug));
 
-  // Explicitly re-shaped into this file's Category type (not the one from
-  // lib/data.ts) so TypeScript treats every entry as the same type and
-  // `.order` is valid on all of them, even though static entries never set it.
   const staticOnly: Category[] = STATIC_CATEGORIES.filter(
     (c) => !sanitySlugs.has(c.slug)
   ).map((c) => ({
@@ -242,9 +239,6 @@ export async function getAllCategories(): Promise<Category[]> {
     heroImage: null,
   }));
 
-  // Sort by the editorial `order` field set in Sanity Studio, not
-  // alphabetically. Categories without an order (e.g. leftover static-only
-  // entries) fall back to the end of the list rather than breaking the sort.
   return [...sanityCategories, ...staticOnly].sort(
     (a, b) => (a.order ?? 999) - (b.order ?? 999)
   );
