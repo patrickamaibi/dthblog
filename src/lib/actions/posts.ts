@@ -42,7 +42,12 @@ function parsePublishedAtLoose(value: string): string {
   return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
 }
 
+// Previously threw "A valid published date is required." whenever the date
+// field was left blank (e.g. a brand-new post before the user touches the
+// date picker). Now falls back to "now" instead of blocking publish, and only
+// throws if the user typed something that isn't a valid date at all.
 function parsePublishedAtStrict(value: string): string {
+  if (!value) return new Date().toISOString();
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     throw new Error("A valid published date is required.");
