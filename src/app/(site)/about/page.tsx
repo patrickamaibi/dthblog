@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Code2, Palette, TrendingUp, Target, ArrowRight } from "lucide-react";
+import { Bot, Palette, TrendingUp, Link2, ShieldCheck, GraduationCap, ArrowRight } from "lucide-react";
 
 export const metadata = {
   title: "About DiscoveryTech Hub Blog",
@@ -8,24 +8,34 @@ export const metadata = {
 
 const COVERAGE = [
   {
-    icon: Code2,
-    title: "Engineering",
-    description: "Architecture, performance, tooling: the technical decisions that hold up under real traffic.",
+    icon: Bot,
+    title: "AI & AI Automation",
+    description: "Practical AI adoption and automation workflows for teams that want results, not hype.",
   },
   {
     icon: Palette,
-    title: "Design",
-    description: "Design systems, UX research, and accessible interfaces built for real people, not portfolios.",
+    title: "Branding",
+    description: "Identity, positioning, and visual systems that make businesses memorable and trusted.",
   },
   {
     icon: TrendingUp,
-    title: "Digital Transformation",
+    title: "Digital Strategy",
     description: "What it actually costs and what it actually achieves for Nigerian SMEs. No inflated promises.",
   },
   {
-    icon: Target,
-    title: "Product Strategy",
-    description: "The decisions that shape how software gets built, shipped, and kept alive after launch.",
+    icon: Link2,
+    title: "Blockchain",
+    description: "Clear-eyed looks at blockchain and Web3, past the noise, at what's actually useful.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Cybersecurity",
+    description: "Practical security guidance for businesses and individuals navigating a riskier web.",
+  },
+  {
+    icon: GraduationCap,
+    title: "ICT Training",
+    description: "Skills, tools, and know-how to help people grow into the digital economy.",
   },
 ];
 
@@ -63,8 +73,9 @@ export default function AboutPage() {
           </h1>
 
           <p className="text-lg sm:text-xl text-white/80 leading-relaxed max-w-2xl">
-            A blog covering engineering, design, and digital growth, written for
-            anyone building something worth building.
+            A blog covering AI and automation, branding, digital strategy, blockchain,
+            cybersecurity, and ICT training, written for anyone building something
+            worth building.
           </p>
         </div>
       </section>
@@ -87,20 +98,19 @@ export default function AboutPage() {
               § DiscoveryTech Hub
             </p>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary dark:text-white mb-4">
-              The company behind the blog
+              Who we are
             </h2>
             <p className="text-slate-600 dark:text-slate-300 leading-8 mb-4">
-              DiscoveryTech Hub is a digital product studio based in Abuja, Nigeria.
-              We believe technology is the most powerful lever for scale available
-              to African businesses, so we bridge the gap between creative vision
-              and robust engineering, delivering products that are not only
-              beautiful but genuinely resilient.
+              DiscoveryTech Hub is a premier ICT solutions company operating at the
+              intersection of technology, creativity, and education, dedicated to
+              driving digital transformation for businesses, organizations, and
+              individuals.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-8 mb-8">
-              We work with businesses across Africa and beyond to design, build,
-              and launch high-quality software products and digital experiences.
-              This blog is one part of that work; everything else lives on our
-              main site.
+              Our team of passionate professionals brings deep expertise across
+              multiple digital disciplines, including software development, IT
+              consulting, digital marketing, and tech education. This blog is one
+              part of that work; everything else lives on our main site.
             </p>
             <a
               href="https://discoverytechhub.com/about"
@@ -124,12 +134,14 @@ export default function AboutPage() {
               § This Blog
             </p>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary dark:text-white mb-4">
-              Real thinking from real product teams
+              Updates, thoughts, and know-how from the field
             </h2>
             <p className="text-slate-600 dark:text-slate-300 leading-8 mb-4">
-              This publication exists to share our learnings, document our processes,
-              and contribute to the growing body of knowledge around software
-              engineering and digital transformation in emerging markets.
+              This publication is where DiscoveryTech Hub shares updates, thoughts,
+              tips, and know-how on the subjects shaping the modern digital
+              economy: AI and AI automation, branding, digital strategy,
+              blockchain, cybersecurity, ICT training, and other tech-related
+              topics.
             </p>
             <p className="text-slate-600 dark:text-slate-300 leading-8">
               Expect sharp, useful, technically grounded material, written by the
@@ -155,10 +167,10 @@ export default function AboutPage() {
             § What We Cover
           </p>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary dark:text-white mb-8">
-            Four beats, one standard
+            Six beats, one standard
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {COVERAGE.map((item, i) => {
               const Icon = item.icon;
               return (
@@ -202,6 +214,10 @@ export default function AboutPage() {
         .dth-delay-3 { animation-delay: 0.15s; }
         .dth-delay-4 { animation-delay: 0.2s; }
         .dth-delay-5 { animation-delay: 0.25s; }
+        .dth-delay-6 { animation-delay: 0.3s; }
+        .dth-delay-7 { animation-delay: 0.35s; }
+        .dth-delay-8 { animation-delay: 0.4s; }
+        .dth-delay-9 { animation-delay: 0.45s; }
       `}</style>
     </main>
   );
