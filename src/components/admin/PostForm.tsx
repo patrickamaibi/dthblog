@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { saveDraft, publishPost } from "@/lib/actions/posts";
 import { RichTextEditor } from "@/components/RichTextEditor";
-import { GalleryUploader } from "@/components/GalleryUploader";
+import { GalleryUploader, GalleryUploaderHandle, ExistingGalleryImage } from "@/components/GalleryUploader";
 
 const AUTOSAVE_INTERVAL_MS = 5000;
 
@@ -23,6 +23,7 @@ type PostFormProps = {
     tagIds?: string[];
     coverImageUrl?: string;
     coverImageAlt?: string;
+    gallery?: ExistingGalleryImage[];
   };
   authors: any[];
   categories: any[];
@@ -32,27 +33,41 @@ type PostFormProps = {
 export function PostForm({ postId: initialPostId, initial, authors, categories, tags }: PostFormProps) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const galleryRef = useRef<GalleryUploaderHandle>(null);
   const [postId, setPostId] = useState<string | null>(initialPostId);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPublishing, startPublishTransition] = useTransition();
   const [isSaving, startSaveTransition] = useTransition();
 
-  // Was previously "" for a brand-new post, which caused the server to throw
-  // "A valid published date is required." on the first Publish click (since
-  // new Date("") is Invalid Date). Defaulting to today fixes that — the field
-  // is still fully editable before publishing.
   const publishedDateValue = initial?.publishedAt
     ? new Date(initial.publishedAt).toISOString().slice(0, 10)
     : new Date().toISOString().slice(0, 10);
 
-  // Autosave on an interval while the form has a title. Uses the latest
-  // postId via a ref so overlapping timers never race on a stale id.
   const postIdRef = useRef(postId);
   postIdRef.current = postId;
 
+  // Stops the autosave loop from firing saveDraft() once a publish is in
+  // flight or has succeeded — otherwise the next 5s tick silently flips
+  // status back to "draft" right after a successful publish.
+  const suspendAutosaveRef = useRef(false);
+
+  // Clears the mainImage and gallery <input type="file"> elements after a
+  // successful save. Without this, both inputs keep holding the same
+  // FileList indefinitely, so every subsequent autosave tick re-uploads the
+  // same files: wasted uploads for the cover image, and duplicate appended
+  // entries for the gallery (since gallery writes are additive).
+  function clearUploadedFileInputs() {
+    if (formRef.current) {
+      const mainImageInput = formRef.current.elements.namedItem("mainImage") as HTMLInputElement | null;
+      if (mainImageInput) mainImageInput.value = "";
+    }
+    galleryRef.current?.reset();
+  }
+
   useEffect(() => {
     const timer = setInterval(() => {
+      if (suspendAutosaveRef.current) return;
       if (!formRef.current) return;
       const formData = new FormData(formRef.current);
       const title = formData.get("title");
@@ -64,9 +79,9 @@ export function PostForm({ postId: initialPostId, initial, authors, categories, 
           const result = await saveDraft(postIdRef.current, formData);
           if (!postIdRef.current && result?.id) {
             setPostId(result.id);
-            // Move to the edit URL so a page refresh doesn't lose the draft.
             router.replace(`/admin/posts/${result.id}/edit`);
           }
+          clearUploadedFileInputs();
           setSaveState("saved");
         } catch (err) {
           console.error(err);
@@ -78,16 +93,45 @@ export function PostForm({ postId: initialPostId, initial, authors, categories, 
     return () => clearInterval(timer);
   }, [router]);
 
-  async function handlePublish() {
-    if (!formRef.current) return;
-    const formData = new FormData(formRef.current);
+  function readFormData() {
+    if (!formRef.current) return null;
+    return new FormData(formRef.current);
+  }
+
+  async function handleSaveDraft() {
+    const formData = readFormData();
+    if (!formData) return;
     setErrorMsg(null);
+    setSaveState("saving");
+    startSaveTransition(async () => {
+      try {
+        const result = await saveDraft(postIdRef.current, formData);
+        if (!postIdRef.current && result?.id) {
+          setPostId(result.id);
+          router.replace(`/admin/posts/${result.id}/edit`);
+        }
+        clearUploadedFileInputs();
+        setSaveState("saved");
+      } catch (err) {
+        console.error(err);
+        setSaveState("error");
+        setErrorMsg(err instanceof Error ? err.message : "Failed to save draft.");
+      }
+    });
+  }
+
+  async function handlePublish() {
+    const formData = readFormData();
+    if (!formData) return;
+    setErrorMsg(null);
+    suspendAutosaveRef.current = true; // stop autosave from clobbering the publish
     startPublishTransition(async () => {
       try {
         const result = await publishPost(postIdRef.current, formData);
-        router.push(postIdRef.current ? "/admin?updated=1" : "/admin?created=1");
         void result;
+        router.push(postIdRef.current ? "/admin?updated=1" : "/admin?created=1");
       } catch (err) {
+        suspendAutosaveRef.current = false; // publish failed, resume normal autosave
         setErrorMsg(err instanceof Error ? err.message : "Failed to publish post.");
       }
     });
@@ -205,18 +249,29 @@ export function PostForm({ postId: initialPostId, initial, authors, categories, 
         </Field>
 
         <Field label="Gallery" hint="Extra images for this post, separate from the cover">
-          <GalleryUploader name="gallery" />
+          <GalleryUploader ref={galleryRef} name="gallery" existingImages={initial?.gallery ?? []} />
         </Field>
       </section>
 
-      <button
-        type="button"
-        onClick={handlePublish}
-        disabled={isPublishing}
-        className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
-      >
-        {isPublishing ? "Publishing..." : "Publish post"}
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveDraft}
+          disabled={isSaving || isPublishing}
+          className="rounded-full border border-slate-300 bg-white px-6 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
+        >
+          {isSaving ? "Saving..." : "Save draft"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handlePublish}
+          disabled={isPublishing}
+          className="rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-50"
+        >
+          {isPublishing ? "Publishing..." : "Publish post"}
+        </button>
+      </div>
     </form>
   );
 }

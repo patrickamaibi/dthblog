@@ -30,7 +30,10 @@ export async function getPostByIdForAdmin(id: string) {
       "body": body[]{
         ...,
         _type == "image" => {
-          "asset": asset->
+          "asset": {
+            "_ref": asset._ref,
+            "url": asset->url
+          }
         }
       },
       publishedAt,
@@ -40,7 +43,12 @@ export async function getPostByIdForAdmin(id: string) {
       "authorId": author->_id,
       "tagIds": tags[]->_id,
       "coverImageUrl": mainImage.asset->url,
-      "coverImageAlt": mainImage.alt
+      "coverImageAlt": mainImage.alt,
+      "gallery": gallery[]{
+        "key": _key,
+        "url": asset->url,
+        alt
+      }
     }
   `,
     { id }

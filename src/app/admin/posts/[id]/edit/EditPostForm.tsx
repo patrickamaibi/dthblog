@@ -31,6 +31,7 @@ export function EditPostForm({
         tagIds: post.tagIds ?? [],
         coverImageUrl: post.coverImageUrl,
         coverImageAlt: post.coverImageAlt,
+        gallery: post.gallery ?? [],
       }}
     />
   );
