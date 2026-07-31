@@ -7,7 +7,7 @@ import { saveDraft, publishPost } from "@/lib/actions/posts";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { GalleryUploader, GalleryUploaderHandle, ExistingGalleryImage } from "@/components/GalleryUploader";
 
-const AUTOSAVE_INTERVAL_MS = 5000;
+const AUTOSAVE_INTERVAL_MS = 120000; // 2 minutes
 
 type PostFormProps = {
   postId: string | null;
@@ -48,7 +48,7 @@ export function PostForm({ postId: initialPostId, initial, authors, categories, 
   postIdRef.current = postId;
 
   // Stops the autosave loop from firing saveDraft() once a publish is in
-  // flight or has succeeded — otherwise the next 5s tick silently flips
+  // flight or has succeeded — otherwise the next tick silently flips
   // status back to "draft" right after a successful publish.
   const suspendAutosaveRef = useRef(false);
 
