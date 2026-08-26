@@ -266,6 +266,44 @@ export async function getCategoryBySlug(slug: string): Promise<Category | null> 
   return STATIC_CATEGORIES.find((c) => c.slug === slug) ?? null;
 }
 
+// --- Authors ---
+
+export async function getAuthorBySlug(slug: string): Promise<Author | null> {
+  const author = await client.fetch(
+    /* groq */ `
+    *[_type == "author" && slug.current == $slug][0] {
+      name,
+      "slug": slug.current,
+      role,
+      "bio": pt::text(bio),
+      "avatar": image.asset->url
+    }
+  `,
+    { slug }
+  );
+
+  if (author) return author;
+
+  // Fallback: check static demo posts for a matching author
+  const staticMatch = STATIC_POSTS.find((p) => p.author.slug === slug);
+  return staticMatch ? staticMatch.author : null;
+}
+
+export async function getPostsByAuthor(authorSlug: string): Promise<PostListItem[]> {
+  const all = await getAllPosts();
+  return all.filter((p) => p.author?.slug === authorSlug);
+}
+
+export async function getAllAuthorSlugs(): Promise<string[]> {
+  const sanitySlugs: string[] = await client.fetch(
+    /* groq */ `*[_type == "author" && defined(slug.current)].slug.current`
+  );
+
+  const staticSlugs = STATIC_POSTS.map((p) => p.author.slug);
+
+  return Array.from(new Set([...sanitySlugs, ...staticSlugs]));
+}
+
 // --- Utils ---
 
 export function formatDate(iso: string): string {
