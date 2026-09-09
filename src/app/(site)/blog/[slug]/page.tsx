@@ -78,21 +78,28 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
+  const metaTitle = post.seo?.metaTitle || `${post.title} — DiscoveryTech Hub Blog`;
+  const metaDescription = post.seo?.metaDescription || post.excerpt;
+
   const ogImageUrl = post.coverImage?.url
     ? `${post.coverImage.url}?w=1200&h=630&fit=crop&auto=format`
     : "/og.png";
 
   return {
-    title: `${post.title} — DiscoveryTech Hub Blog`,
-    description: post.excerpt,
+    title: metaTitle,
+    description: metaDescription,
+    robots: post.seo?.noIndex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
     alternates: {
       canonical: `https://blog.discoverytechhub.com/blog/${post.slug}`,
     },
     openGraph: {
-      title: post.title,
-      description: post.excerpt,
+      title: metaTitle,
+      description: metaDescription,
       type: "article",
       publishedTime: post.publishedAt,
+      modifiedTime: post.updatedAt || post.publishedAt,
       authors: [post.author.name],
       url: `https://blog.discoverytechhub.com/blog/${post.slug}`,
       images: [
@@ -106,8 +113,8 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.excerpt,
+      title: metaTitle,
+      description: metaDescription,
       images: [ogImageUrl],
     },
   };
@@ -132,6 +139,7 @@ export default async function BlogPostPage({
     description: post.excerpt,
     image: post.coverImage?.url,
     datePublished: post.publishedAt,
+    dateModified: post.updatedAt || post.publishedAt,
     author: { "@type": "Person", name: post.author.name },
     publisher: {
       "@type": "Organization",

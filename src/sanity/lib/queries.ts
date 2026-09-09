@@ -34,17 +34,26 @@ export type CoverImage = {
   alt: string;
 };
 
+export type Seo = {
+  metaTitle?: string;
+  metaDescription?: string;
+  focusKeyword?: string;
+  noIndex?: boolean;
+};
+
 export type PostListItem = {
   _id: string;
   slug: string;
   title: string;
   excerpt: string;
   publishedAt: string;
+  updatedAt?: string;
   readTime: number;
   category: Category;
   tags: Tag[];
   author: Author;
   coverImage: CoverImage;
+  seo?: Seo;
   isStatic?: boolean;
 };
 
@@ -59,6 +68,7 @@ const POST_LIST_PROJECTION = /* groq */ `{
   "slug": slug.current,
   excerpt,
   publishedAt,
+  updatedAt,
   readTime,
   "category": categories[0]->{
     title,
@@ -81,6 +91,12 @@ const POST_LIST_PROJECTION = /* groq */ `{
   "coverImage": {
     "url": mainImage.asset->url,
     "alt": mainImage.alt
+  },
+  seo {
+    metaTitle,
+    metaDescription,
+    focusKeyword,
+    noIndex
   }
 }`;
 
@@ -93,6 +109,7 @@ function staticPostToListItem(p: StaticPost): PostListItem {
     title: p.title,
     excerpt: p.excerpt,
     publishedAt: p.publishedAt,
+    updatedAt: undefined,
     readTime: p.readTime,
     category: p.category,
     tags: p.tags,
@@ -104,6 +121,7 @@ function staticPostToListItem(p: StaticPost): PostListItem {
       avatar: p.author.avatar,
     },
     coverImage: p.coverImage,
+    seo: undefined,
     isStatic: true,
   };
 }
@@ -155,6 +173,7 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
         }
       },
       publishedAt,
+      updatedAt,
       readTime,
       "category": categories[0]->{
         title,
@@ -177,6 +196,12 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
       "coverImage": {
         "url": mainImage.asset->url,
         "alt": mainImage.alt
+      },
+      seo {
+        metaTitle,
+        metaDescription,
+        focusKeyword,
+        noIndex
       }
     }
   `,

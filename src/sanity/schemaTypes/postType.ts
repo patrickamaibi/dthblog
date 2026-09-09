@@ -99,8 +99,19 @@ export const postType = defineType({
       type: 'datetime',
     }),
     defineField({
+      name: 'updatedAt',
+      title: 'Last Updated',
+      type: 'datetime',
+      description: 'Update this whenever you refresh old content. Signals freshness to search engines.',
+    }),
+    defineField({
       name: 'body',
       type: 'blockContent',
+    }),
+    defineField({
+      name: 'seo',
+      title: 'SEO',
+      type: 'seo',
     }),
   ],
   preview: {
