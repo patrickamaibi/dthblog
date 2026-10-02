@@ -41,6 +41,11 @@ export type Seo = {
   noIndex?: boolean;
 };
 
+export type FaqItem = {
+  question: string;
+  answer: string;
+};
+
 export type PostListItem = {
   _id: string;
   slug: string;
@@ -60,6 +65,8 @@ export type PostListItem = {
 export type PostDetail = PostListItem & {
   body: any; // Portable Text blocks (Sanity posts only)
   htmlContent?: string; // Raw HTML (static/demo posts only)
+  keyTakeaways?: string[]; // Short answer-first points (Sanity posts only)
+  faq?: FaqItem[]; // Questions and answers (Sanity posts only)
 };
 
 const POST_LIST_PROJECTION = /* groq */ `{
@@ -85,7 +92,7 @@ const POST_LIST_PROJECTION = /* groq */ `{
     name,
     "slug": slug.current,
     role,
-    bio,
+    "bio": pt::text(bio),
     "avatar": image.asset->url
   },
   "coverImage": {
@@ -166,6 +173,8 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
       title,
       "slug": slug.current,
       excerpt,
+      keyTakeaways,
+      "faq": faq[]{question, answer},
       "body": body[]{
         ...,
         _type == "image" => {
@@ -187,12 +196,12 @@ export async function getPostBySlug(slug: string): Promise<PostDetail | null> {
       },
       "tags": tags[]->{title, "slug": slug.current},
       "author": author->{
-  name,
-  "slug": slug.current,
-  role,
-  "bio": pt::text(bio),
-  "avatar": image.asset->url
-},
+        name,
+        "slug": slug.current,
+        role,
+        "bio": pt::text(bio),
+        "avatar": image.asset->url
+      },
       "coverImage": {
         "url": mainImage.asset->url,
         "alt": mainImage.alt

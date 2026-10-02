@@ -134,6 +134,14 @@ export default async function BlogPostPage({
     Boolean
   );
 
+  // Only render takeaways and FAQ entries that are actually filled in
+  const takeaways = (post.keyTakeaways ?? []).filter(
+    (t): t is string => typeof t === "string" && t.trim().length > 0
+  );
+  const faq = (post.faq ?? []).filter(
+    (f) => Boolean(f?.question?.trim()) && Boolean(f?.answer?.trim())
+  );
+
   // Only show an "Updated" date when the post really was updated on a later day
   const wasUpdated =
     Boolean(post.updatedAt) && post.updatedAt!.slice(0, 10) !== post.publishedAt.slice(0, 10);
@@ -167,6 +175,17 @@ export default async function BlogPostPage({
     },
   };
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${postUrl}#faq`,
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+
   const breadcrumbs = [
     { name: "Home", path: "/" },
     ...(post.category?.slug
@@ -179,6 +198,7 @@ export default async function BlogPostPage({
     <>
       <JsonLd data={articleJsonLd} />
       <JsonLd data={breadcrumbJsonLd(breadcrumbs)} />
+      {faq.length > 0 && <JsonLd data={faqJsonLd} />}
 
       <div className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
         <div className="pointer-events-none absolute -top-24 -right-32 w-96 h-96 rounded-full bg-[#1A4FD6]/10 dark:bg-[#1A4FD6]/15 blur-[120px]" />
@@ -280,10 +300,55 @@ export default async function BlogPostPage({
               className="prose prose-lg max-w-none dth-fade-in-up opacity-0"
               style={{ animationDelay: "150ms" }}
             >
+              {takeaways.length > 0 && (
+                <section
+                  aria-label="Key takeaways"
+                  className="not-prose mb-10 rounded-2xl border border-accent/30 bg-accent/[0.04] p-6"
+                >
+                  <p className="font-mono text-xs tracking-widest uppercase text-accent mb-4">
+                    <span>§</span> Key takeaways
+                  </p>
+                  <ul className="space-y-3">
+                    {takeaways.map((point, i) => (
+                      <li
+                        key={i}
+                        className="flex gap-3 text-base leading-relaxed text-primary dark:text-white"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                        />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {post.isStatic ? (
                 <div dangerouslySetInnerHTML={{ __html: post.htmlContent ?? "" }} />
               ) : (
                 <PortableText value={post.body} components={portableTextComponents} />
+              )}
+
+              {faq.length > 0 && (
+                <section className="not-prose mt-14 border-t border-border pt-10">
+                  <h2 className="text-2xl font-bold tracking-tight text-primary dark:text-white mb-6">
+                    Frequently asked questions
+                  </h2>
+                  <div className="space-y-6">
+                    {faq.map((item, i) => (
+                      <div key={i}>
+                        <h3 className="text-lg font-semibold text-primary dark:text-white mb-2">
+                          {item.question}
+                        </h3>
+                        <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-line">
+                          {item.answer}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
             </article>
 
