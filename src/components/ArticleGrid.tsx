@@ -146,7 +146,7 @@ export default async function ArticleGrid() {
                     src={post.coverImage.url}
                     alt={post.coverImage.alt ?? post.title}
                     fill
-                    priority={i === 0}
+                    sizes="(min-width: 768px) 33vw, 100vw"
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
                   />
                 )}
@@ -230,6 +230,7 @@ export default async function ArticleGrid() {
               src="/dth16.png"
               alt=""
               fill
+              sizes="(min-width: 768px) 33vw, 100vw"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/75 to-primary/40 group-hover:from-accent group-hover:via-accent/75 transition-colors duration-300" />

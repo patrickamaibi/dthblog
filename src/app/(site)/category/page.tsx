@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import Image from "next/image";
 import { getAllCategories, getAllPosts } from "@/sanity/lib/queries";
 import {
@@ -12,7 +12,13 @@ import {
   Sparkles,
   Folder,
 } from "lucide-react";
-import type { Metadata } from "next";
+import {
+  JsonLd,
+  buildMetadata,
+  breadcrumbJsonLd,
+  SITE_URL,
+  WEBSITE_ID,
+} from "@/components/Seo";
 
 export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
@@ -28,13 +34,14 @@ const CATEGORY_ICONS: Record<string, typeof Folder> = {
   others: Sparkles,
 };
 
-export const metadata: Metadata = {
-  title: "Topics, DiscoveryTech Hub Blog",
-  description: "Every subject we write about, from AI and product design to security and strategy.",
-  alternates: {
-    canonical: "https://blog.discoverytechhub.com/category",
-  },
-};
+const DESCRIPTION =
+  "Browse every topic on the DiscoveryTech Hub Blog: AI and automation, branding, security, digital strategy, ICT training, and Web3.";
+
+export const metadata = buildMetadata({
+  title: "Topics We Cover",
+  description: DESCRIPTION,
+  path: "/category",
+});
 
 // Hand-placed node positions and edges (percentages of the hero box),
 // deliberately fixed rather than randomized so the mesh reads as designed.
@@ -107,8 +114,35 @@ export default async function CategoryIndexPage() {
     })
   );
 
+  const collectionJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Topics We Cover",
+    description: DESCRIPTION,
+    url: `${SITE_URL}/category`,
+    inLanguage: "en",
+    isPartOf: { "@id": WEBSITE_ID },
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: categories.map((c, i) => ({
+        "@type": "ListItem",
+        position: i + 1,
+        name: c.title,
+        url: `${SITE_URL}/category/${c.slug}`,
+      })),
+    },
+  };
+
   return (
     <>
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Topics", path: "/category" },
+        ])}
+      />
+
       <div className="relative w-full overflow-hidden pt-32 pb-20 md:pt-40 md:pb-28 bg-primary dark:bg-[#0A1F44]">
         {/* Background image, dimmed to 50% opacity, same layering approach
             as the About page hero: image behind, brand gradient on top,
@@ -128,13 +162,13 @@ export default async function CategoryIndexPage() {
 
         <HeroMesh />
         <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[#1A4FD6]/40 blur-[100px]" />
-        <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96rounded-full bg-[#0A1F44]/60 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-[#0A1F44]/60 blur-[100px]" />
 
         <div className="relative mx-auto max-w-7xl px-6 sm:px-8">
           <p className="font-mono text-xs tracking-widest uppercase text-white/70 mb-5">
-           <span className="text-accent">§</span> Browse
+            <span className="text-accent">§</span> Browse
           </p>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighttext-white leading-[1.05] max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white leading-[1.05] max-w-2xl">
             Topics
           </h1>
           <p className="mt-5 text-base sm:text-lg text-white/75 leading-relaxed max-w-xl">
