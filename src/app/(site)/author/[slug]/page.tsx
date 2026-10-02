@@ -9,6 +9,15 @@ import {
 } from "@/sanity/lib/queries";
 import { ArrowLeft, ArrowRight, User } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  JsonLd,
+  buildMetadata,
+  breadcrumbJsonLd,
+  ogImage,
+  absoluteUrl,
+  SITE_URL,
+  WEBSITE_ID,
+} from "@/components/Seo";
 
 export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
@@ -28,24 +37,20 @@ export async function generateMetadata({
   const author = await getAuthorBySlug(slug);
   if (!author) return {};
 
+  const posts = await getPostsByAuthor(slug);
+
   const description =
     author.bio?.slice(0, 155) ||
     `Articles by ${author.name}${author.role ? `, ${author.role}` : ""} on the DiscoveryTech Hub blog.`;
 
-  return {
-    title: `${author.name} — DiscoveryTech Hub Blog`,
+  return buildMetadata({
+    title: `Articles by ${author.name}`,
     description,
-    alternates: {
-      canonical: `https://blog.discoverytechhub.com/author/${slug}`,
-    },
-    openGraph: {
-      title: author.name,
-      description,
-      type: "profile",
-      url: `https://blog.discoverytechhub.com/author/${slug}`,
-      images: author.avatar ? [{ url: author.avatar, width: 800, height: 800, alt: author.name }] : [],
-    },
-  };
+    path: `/author/${slug}`,
+    image: ogImage(author.avatar, author.name),
+    // An author with no articles is a thin page, so keep it out of search results
+    index: posts.length > 0,
+  });
 }
 
 export default async function AuthorPage({
@@ -59,24 +64,32 @@ export default async function AuthorPage({
 
   const posts = await getPostsByAuthor(slug);
 
+  const profileUrl = `${SITE_URL}/author/${slug}`;
+
   const personJsonLd = {
     "@context": "https://schema.org",
     "@type": "ProfilePage",
+    url: profileUrl,
+    isPartOf: { "@id": WEBSITE_ID },
     mainEntity: {
       "@type": "Person",
+      "@id": `${profileUrl}#person`,
       name: author.name,
       jobTitle: author.role || undefined,
       description: author.bio || undefined,
-      image: author.avatar || undefined,
-      url: `https://blog.discoverytechhub.com/author/${slug}`,
+      image: author.avatar ? absoluteUrl(author.avatar) : undefined,
+      url: profileUrl,
     },
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+      <JsonLd data={personJsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: author.name, path: `/author/${slug}` },
+        ])}
       />
 
       <main className="pt-28 pb-24 min-h-screen">

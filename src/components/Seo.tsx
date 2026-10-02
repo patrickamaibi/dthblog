@@ -4,41 +4,80 @@ import type { Metadata } from "next";
  * Seo.tsx
  * ------------------------------
  * 1. buildMetadata() fills in the repetitive parts of a Next.js Metadata
- *    object (canonical URL, OG, Twitter card) so each page only supplies
- *    what is different about it.
+ *    object (canonical URL, OG, Twitter card, RSS link) so each page only
+ *    supplies what is different about it.
  * 2. <JsonLd /> renders a JSON-LD <script> tag safely.
- * 3. breadcrumbJsonLd() builds a BreadcrumbList for any page.
+ * 3. breadcrumbJsonLd(), ogImage() and absoluteUrl() are shared helpers.
  *
  * Titles passed to buildMetadata() go through the "%s | DiscoveryTech Hub"
  * template in the root layout, so do not add the brand name yourself.
+ * Use titleAbsolute when the title is long or already carries the brand.
  */
 
-const SITE_NAME = "DiscoveryTech Hub Blog";
-const SITE_URL = "https://blog.discoverytechhub.com";
-const MAIN_SITE_URL = "https://discoverytechhub.com";
+export const SITE_NAME = "DiscoveryTech Hub Blog";
+export const SITE_URL = "https://blog.discoverytechhub.com";
+export const MAIN_SITE_URL = "https://discoverytechhub.com";
+export const ORG_ID = `${MAIN_SITE_URL}/#organization`;
+export const WEBSITE_ID = `${SITE_URL}/#website`;
 const DEFAULT_OG_IMAGE = "/og.png";
 const TWITTER_HANDLE = "@disctechhub"; // confirm this handle exists
+
+type ShareImage = {
+  url: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+};
 
 type BuildMetadataInput = {
   /** Page-specific title, without the brand name. */
   title: string;
+  /** true = do not append " | DiscoveryTech Hub" to the title. */
+  titleAbsolute?: boolean;
   description: string;
   /** Path only, e.g. "/blog/my-post" or "/category/security". Root is "/". */
   path: string;
-  /** Defaults to DEFAULT_OG_IMAGE if omitted. */
-  image?: { url: string; width?: number; height?: number; alt?: string };
+  /** Defaults to the site's /og.png if omitted. */
+  image?: ShareImage;
   /** "article" for blog posts, "website" for everything else (default). */
   type?: "article" | "website";
   /** Only used when type is "article". */
   publishedTime?: string;
   modifiedTime?: string;
   authorName?: string;
-  /** Set false to noindex a page (e.g. internal search results). */
+  /** Set false to noindex a page. */
   index?: boolean;
+  /** Defaults to the same value as index. Use index:false + follow:true for archives. */
+  follow?: boolean;
 };
+
+/** Turns a path or URL into a full https URL on this site. */
+export function absoluteUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  return `${SITE_URL}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+}
+
+/**
+ * Share image for Open Graph and Twitter. Sanity CDN images are cropped to
+ * 1200x630 by the CDN; local /public images are used as they are.
+ */
+export function ogImage(url: string | null | undefined, alt: string): ShareImage {
+  if (!url) return { url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt };
+  if (url.includes("cdn.sanity.io")) {
+    const sep = url.includes("?") ? "&" : "?";
+    return {
+      url: `${url}${sep}w=1200&h=630&fit=crop&auto=format`,
+      width: 1200,
+      height: 630,
+      alt,
+    };
+  }
+  return { url, alt };
+}
 
 export function buildMetadata({
   title,
+  titleAbsolute = false,
   description,
   path,
   image,
@@ -47,25 +86,29 @@ export function buildMetadata({
   modifiedTime,
   authorName,
   index = true,
+  follow,
 }: BuildMetadataInput): Metadata {
   const url = `${SITE_URL}${path === "/" ? "" : path}`;
-  const ogImage = image ?? {
+  const shareImage: ShareImage = image ?? {
     url: DEFAULT_OG_IMAGE,
     width: 1200,
     height: 630,
     alt: SITE_NAME,
   };
+  const shouldFollow = follow ?? index;
 
   return {
-    title,
+    title: titleAbsolute ? { absolute: title } : title,
     description,
+    // Page-level "alternates" replaces the layout's, so the RSS link is repeated here.
     alternates: {
       canonical: url,
+      types: { "application/rss+xml": `${SITE_URL}/feed.xml` },
     },
     robots: {
       index,
-      follow: index,
-      googleBot: { index, follow: index },
+      follow: shouldFollow,
+      googleBot: { index, follow: shouldFollow },
     },
     openGraph: {
       title,
@@ -76,10 +119,10 @@ export function buildMetadata({
       type,
       images: [
         {
-          url: ogImage.url,
-          width: ogImage.width ?? 1200,
-          height: ogImage.height ?? 630,
-          alt: ogImage.alt ?? title,
+          url: shareImage.url,
+          ...(shareImage.width ? { width: shareImage.width } : {}),
+          ...(shareImage.height ? { height: shareImage.height } : {}),
+          alt: shareImage.alt ?? title,
         },
       ],
       ...(type === "article" && publishedTime ? { publishedTime } : {}),
@@ -92,7 +135,7 @@ export function buildMetadata({
       description,
       site: TWITTER_HANDLE,
       creator: TWITTER_HANDLE,
-      images: [ogImage.url],
+      images: [shareImage.url],
     },
   };
 }
@@ -117,7 +160,7 @@ export function JsonLd({ data }: { data: Record<string, unknown> }) {
 export const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "@id": `${MAIN_SITE_URL}/#organization`,
+  "@id": ORG_ID,
   name: "DiscoveryTech Hub",
   url: MAIN_SITE_URL,
   logo: {

@@ -22,7 +22,26 @@ import {
   Clock,
 } from "lucide-react";
 import type { Metadata } from "next";
-export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+import {
+  JsonLd,
+  buildMetadata,
+  breadcrumbJsonLd,
+  ogImage,
+  absoluteUrl,
+  SITE_URL,
+  MAIN_SITE_URL,
+  ORG_ID,
+  WEBSITE_ID,
+} from "@/components/Seo";
+
+// Re-fetch from Sanity at most once a minute. Posts not pre-built at deploy
+// time are generated on first request.
+export const revalidate = 60;
+
+// Search results cut titles at about 60 characters. The layout adds
+// " | DiscoveryTech Hub" (20 characters), so long titles skip the brand.
+const BRAND_SUFFIX_LENGTH = " | DiscoveryTech Hub".length;
+const MAX_TITLE_LENGTH = 60;
 
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
@@ -78,46 +97,21 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
-  const metaTitle = post.seo?.metaTitle || `${post.title} — DiscoveryTech Hub Blog`;
-  const metaDescription = post.seo?.metaDescription || post.excerpt;
+  const title = post.seo?.metaTitle || post.title;
+  const description = post.seo?.metaDescription || post.excerpt;
 
-  const ogImageUrl = post.coverImage?.url
-    ? `${post.coverImage.url}?w=1200&h=630&fit=crop&auto=format`
-    : "/og.png";
-
-  return {
-    title: metaTitle,
-    description: metaDescription,
-    robots: post.seo?.noIndex
-      ? { index: false, follow: false }
-      : { index: true, follow: true },
-    alternates: {
-      canonical: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-    },
-    openGraph: {
-      title: metaTitle,
-      description: metaDescription,
-      type: "article",
-      publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt || post.publishedAt,
-      authors: [post.author.name],
-      url: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-      images: [
-        {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: post.coverImage?.alt ?? post.title,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: metaTitle,
-      description: metaDescription,
-      images: [ogImageUrl],
-    },
-  };
+  return buildMetadata({
+    title,
+    titleAbsolute: title.length + BRAND_SUFFIX_LENGTH > MAX_TITLE_LENGTH,
+    description,
+    path: `/blog/${post.slug}`,
+    image: ogImage(post.coverImage?.url, post.coverImage?.alt || post.title),
+    type: "article",
+    publishedTime: post.publishedAt,
+    modifiedTime: post.updatedAt || post.publishedAt,
+    authorName: post.author.name,
+    index: !post.seo?.noIndex,
+  });
 }
 
 export default async function BlogPostPage({
@@ -132,29 +126,59 @@ export default async function BlogPostPage({
   const Icon = CATEGORY_ICONS[post.category?.slug] ?? Folder;
   const related = await getRelatedPosts(post.slug, post.category?.slug ?? "", 3);
 
+  const postUrl = `${SITE_URL}/blog/${post.slug}`;
+  const authorUrl = `${SITE_URL}/author/${post.author.slug}`;
+  const description = post.seo?.metaDescription || post.excerpt;
+  const imageUrl = post.coverImage?.url ? absoluteUrl(post.coverImage.url) : undefined;
+  const keywords = [post.seo?.focusKeyword, ...(post.tags ?? []).map((t) => t.title)].filter(
+    Boolean
+  );
+
+  // Only show an "Updated" date when the post really was updated on a later day
+  const wasUpdated =
+    Boolean(post.updatedAt) && post.updatedAt!.slice(0, 10) !== post.publishedAt.slice(0, 10);
+
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.excerpt,
-    image: post.coverImage?.url,
+    "@type": "BlogPosting",
+    "@id": `${postUrl}#article`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    headline: post.title.slice(0, 110),
+    description,
+    image: imageUrl ? [imageUrl] : undefined,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt || post.publishedAt,
-    author: { "@type": "Person", name: post.author.name },
+    inLanguage: "en",
+    articleSection: post.category?.title,
+    keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
+    isPartOf: { "@id": WEBSITE_ID },
+    author: {
+      "@type": "Person",
+      "@id": `${authorUrl}#person`,
+      name: post.author.name,
+      url: authorUrl,
+    },
     publisher: {
       "@type": "Organization",
+      "@id": ORG_ID,
       name: "DiscoveryTech Hub",
-      logo: { "@type": "ImageObject", url: "https://blog.discoverytechhub.com/logonav.png" },
+      url: MAIN_SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logonav.png` },
     },
-    mainEntityOfPage: `https://blog.discoverytechhub.com/blog/${post.slug}`,
   };
+
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    ...(post.category?.slug
+      ? [{ name: post.category.title, path: `/category/${post.category.slug}` }]
+      : []),
+    { name: post.title, path: `/blog/${post.slug}` },
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
+      <JsonLd data={articleJsonLd} />
+      <JsonLd data={breadcrumbJsonLd(breadcrumbs)} />
 
       <div className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
         <div className="pointer-events-none absolute -top-24 -right-32 w-96 h-96 rounded-full bg-[#1A4FD6]/10 dark:bg-[#1A4FD6]/15 blur-[120px]" />
@@ -202,9 +226,24 @@ export default async function BlogPostPage({
                   />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary dark:text-white">{post.author.name}</p>
-                  <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                  <p className="text-sm font-semibold text-primary dark:text-white">
+                    <Link
+                      href={`/author/${post.author.slug}`}
+                      className="hover:text-accent transition-colors"
+                    >
+                      {post.author.name}
+                    </Link>
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
                     <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+                    {wasUpdated && post.updatedAt && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
+                        </span>
+                      </>
+                    )}
                     <span>·</span>
                     <span className="inline-flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {post.readTime} min read
@@ -264,7 +303,14 @@ export default async function BlogPostPage({
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-primary dark:text-white">{post.author.name}</p>
+                    <p className="text-sm font-bold text-primary dark:text-white">
+                      <Link
+                        href={`/author/${post.author.slug}`}
+                        className="hover:text-accent transition-colors"
+                      >
+                        {post.author.name}
+                      </Link>
+                    </p>
                     <p className="text-xs text-muted-foreground">{post.author.role}</p>
                   </div>
                 </div>
