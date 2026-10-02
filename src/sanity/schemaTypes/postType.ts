@@ -42,6 +42,21 @@ export const postType = defineType({
       description: 'Short summary shown on post cards and the article header.',
     }),
     defineField({
+      name: 'keyTakeaways',
+      title: 'Key takeaways',
+      type: 'array',
+      description:
+        '3 to 5 short points that answer the main question of the post. Shown above the article and read by search and AI engines. Each point should make sense on its own, without the rest of the post.',
+      of: [
+        defineArrayMember({
+          type: 'string',
+          validation: (Rule) =>
+            Rule.max(240).warning('Keep each point under 240 characters'),
+        }),
+      ],
+      validation: (Rule) => Rule.max(6).warning('3 to 5 points works best'),
+    }),
+    defineField({
       name: 'author',
       type: 'reference',
       to: {type: 'author'},
@@ -107,6 +122,42 @@ export const postType = defineType({
     defineField({
       name: 'body',
       type: 'blockContent',
+    }),
+    defineField({
+      name: 'faq',
+      title: 'FAQ',
+      type: 'array',
+      description:
+        'Questions readers actually ask about this topic, each with a direct answer of 2 to 4 sentences. Shown at the bottom of the article and added as FAQ structured data.',
+      of: [
+        defineArrayMember({
+          type: 'object',
+          name: 'faqItem',
+          title: 'Question',
+          fields: [
+            defineField({
+              name: 'question',
+              type: 'string',
+              title: 'Question',
+              validation: (Rule) => Rule.required(),
+            }),
+            defineField({
+              name: 'answer',
+              type: 'text',
+              rows: 4,
+              title: 'Answer',
+              validation: (Rule) => [
+                Rule.required(),
+                Rule.max(600).warning('Keep answers under 600 characters'),
+              ],
+            }),
+          ],
+          preview: {
+            select: {title: 'question', subtitle: 'answer'},
+          },
+        }),
+      ],
+      validation: (Rule) => Rule.max(8).warning('3 to 6 questions works best'),
     }),
     defineField({
       name: 'seo',

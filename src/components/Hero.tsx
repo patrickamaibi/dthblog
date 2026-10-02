@@ -143,15 +143,23 @@ export default function Hero() {
             </p>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-primary dark:text-white leading-[1.05] mb-6">
-              Insights on{" "}
-              <span className="inline-block relative">
-                <span className="bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-move bg-gradient-to-r from-primary via-accent to-primary dark:from-white dark:via-accent dark:to-white">
-                  {typed}
-                </span>
-                <span className="inline-block w-[2px] h-[0.9em] bg-accent ml-1 align-middle animate-blink" />
+              {/* The animated text starts empty, so the complete headline is kept
+                  here for search engines, AI crawlers and screen readers. */}
+              <span className="sr-only">
+                Insights on technology, digital growth, ICT training, and branding for African
+                businesses.
               </span>
-              <br className="hidden sm:block" />
-              for African businesses.
+              <span aria-hidden="true">
+                Insights on{" "}
+                <span className="inline-block relative">
+                  <span className="bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient-move bg-gradient-to-r from-primary via-accent to-primary dark:from-white dark:via-accent dark:to-white">
+                    {typed}
+                  </span>
+                  <span className="inline-block w-[2px] h-[0.9em] bg-accent ml-1 align-middle animate-blink" />
+                </span>
+                <br className="hidden sm:block" />
+                for African businesses.
+              </span>
             </h1>
 
             <p className="text-lg text-muted-foreground max-w-lg leading-relaxed">

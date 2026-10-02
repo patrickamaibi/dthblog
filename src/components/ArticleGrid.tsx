@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getAllPosts, getAllCategories, formatDate } from "@/sanity/lib/queries";
+import { SOCIAL_LINKS } from "@/components/Seo";
 import {
   ArrowRight,
   Bot,
@@ -53,11 +54,12 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-const SOCIAL_LINKS = [
-  { name: "Instagram", href: "https://instagram.com/discoverytechhub", icon: InstagramIcon },
-  { name: "Facebook", href: "https://facebook.com/discoverytechhub", icon: FacebookIcon },
-  { name: "LinkedIn", href: "https://linkedin.com/company/discoverytechhub", icon: LinkedinIcon },
-  { name: "TikTok", href: "https://tiktok.com/@discoverytechhub", icon: TikTokIcon },
+// URLs come from SOCIAL_LINKS in components/Seo.tsx, the single source of truth
+const SOCIAL_BUTTONS = [
+  { name: "Instagram", href: SOCIAL_LINKS.instagram, icon: InstagramIcon },
+  { name: "Facebook", href: SOCIAL_LINKS.facebook, icon: FacebookIcon },
+  { name: "LinkedIn", href: SOCIAL_LINKS.linkedin, icon: LinkedinIcon },
+  { name: "TikTok", href: SOCIAL_LINKS.tiktok, icon: TikTokIcon },
 ];
 
 function SectionHeader({
@@ -146,7 +148,7 @@ export default async function ArticleGrid() {
                     src={post.coverImage.url}
                     alt={post.coverImage.alt ?? post.title}
                     fill
-                    priority={i === 0}
+                    sizes="(min-width: 768px) 33vw, 100vw"
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.08]"
                   />
                 )}
@@ -230,6 +232,7 @@ export default async function ArticleGrid() {
               src="/dth16.png"
               alt=""
               fill
+              sizes="(min-width: 768px) 33vw, 100vw"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/75 to-primary/40 group-hover:from-accent group-hover:via-accent/75 transition-colors duration-300" />
@@ -265,7 +268,7 @@ export default async function ArticleGrid() {
           </p>
 
           <div className="relative flex items-center gap-3">
-            {SOCIAL_LINKS.map((social) => {
+            {SOCIAL_BUTTONS.map((social) => {
               const SocialIcon = social.icon;
               return (
                 <a

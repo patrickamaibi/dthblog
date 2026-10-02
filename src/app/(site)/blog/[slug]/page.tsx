@@ -22,7 +22,26 @@ import {
   Clock,
 } from "lucide-react";
 import type { Metadata } from "next";
-export const revalidate = 0; // always fetch fresh data from Sanity, never cache
+import {
+  JsonLd,
+  buildMetadata,
+  breadcrumbJsonLd,
+  ogImage,
+  absoluteUrl,
+  SITE_URL,
+  MAIN_SITE_URL,
+  ORG_ID,
+  WEBSITE_ID,
+} from "@/components/Seo";
+
+// Re-fetch from Sanity at most once a minute. Posts not pre-built at deploy
+// time are generated on first request.
+export const revalidate = 60;
+
+// Search results cut titles at about 60 characters. The layout adds
+// " | DiscoveryTech Hub" (20 characters), so long titles skip the brand.
+const BRAND_SUFFIX_LENGTH = " | DiscoveryTech Hub".length;
+const MAX_TITLE_LENGTH = 60;
 
 const CATEGORY_ICONS: Record<string, typeof Folder> = {
   "ai-automation": Bot,
@@ -48,6 +67,67 @@ const portableTextComponents: PortableTextComponents = {
               className="object-cover"
               sizes="(min-width: 1024px) 800px, 100vw"
             />
+          </div>
+        </figure>
+      );
+    },
+    // Rows of plain-text cells. Rendered as a real <table> with a header row so
+    // search and AI engines can read it. Wide tables scroll sideways inside
+    // their own box instead of breaking the page layout on phones.
+    table: ({ value }) => {
+      const rows: string[][] = Array.isArray(value?.rows)
+        ? value.rows.map((row: { cells?: unknown[] }) =>
+            Array.isArray(row?.cells) ? row.cells.map((cell) => String(cell ?? "")) : []
+          )
+        : [];
+      const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+      if (rows.length === 0 || columnCount === 0) return null;
+
+      const hasHeaderRow = value?.hasHeaderRow !== false;
+      const pad = (row: string[]) =>
+        Array.from({ length: columnCount }, (_, i) => row[i] ?? "");
+      const headRow = hasHeaderRow ? pad(rows[0]) : null;
+      const bodyRows = (hasHeaderRow ? rows.slice(1) : rows).map(pad);
+
+      return (
+        <figure className="my-8 not-prose">
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full border-collapse text-left text-sm">
+              {value?.caption && (
+                <caption className="border-b border-border px-4 py-3 text-left text-sm font-semibold text-primary dark:text-white">
+                  {value.caption}
+                </caption>
+              )}
+              {headRow && (
+                <thead className="bg-accent/[0.06]">
+                  <tr>
+                    {headRow.map((cell, i) => (
+                      <th
+                        key={i}
+                        scope="col"
+                        className="border-b border-border px-4 py-3 align-top font-semibold text-primary dark:text-white"
+                      >
+                        {cell}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              )}
+              <tbody>
+                {bodyRows.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-b border-border last:border-b-0">
+                    {row.map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className="px-4 py-3 align-top leading-relaxed text-muted-foreground whitespace-pre-line"
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </figure>
       );
@@ -78,46 +158,21 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return {};
 
-  const metaTitle = post.seo?.metaTitle || `${post.title} — DiscoveryTech Hub Blog`;
-  const metaDescription = post.seo?.metaDescription || post.excerpt;
+  const title = post.seo?.metaTitle || post.title;
+  const description = post.seo?.metaDescription || post.excerpt;
 
-  const ogImageUrl = post.coverImage?.url
-    ? `${post.coverImage.url}?w=1200&h=630&fit=crop&auto=format`
-    : "/og.png";
-
-  return {
-    title: metaTitle,
-    description: metaDescription,
-    robots: post.seo?.noIndex
-      ? { index: false, follow: false }
-      : { index: true, follow: true },
-    alternates: {
-      canonical: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-    },
-    openGraph: {
-      title: metaTitle,
-      description: metaDescription,
-      type: "article",
-      publishedTime: post.publishedAt,
-      modifiedTime: post.updatedAt || post.publishedAt,
-      authors: [post.author.name],
-      url: `https://blog.discoverytechhub.com/blog/${post.slug}`,
-      images: [
-        {
-          url: ogImageUrl,
-          width: 1200,
-          height: 630,
-          alt: post.coverImage?.alt ?? post.title,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: metaTitle,
-      description: metaDescription,
-      images: [ogImageUrl],
-    },
-  };
+  return buildMetadata({
+    title,
+    titleAbsolute: title.length + BRAND_SUFFIX_LENGTH > MAX_TITLE_LENGTH,
+    description,
+    path: `/blog/${post.slug}`,
+    image: ogImage(post.coverImage?.url, post.coverImage?.alt || post.title),
+    type: "article",
+    publishedTime: post.publishedAt,
+    modifiedTime: post.updatedAt || post.publishedAt,
+    authorName: post.author.name,
+    index: !post.seo?.noIndex,
+  });
 }
 
 export default async function BlogPostPage({
@@ -132,29 +187,79 @@ export default async function BlogPostPage({
   const Icon = CATEGORY_ICONS[post.category?.slug] ?? Folder;
   const related = await getRelatedPosts(post.slug, post.category?.slug ?? "", 3);
 
+  const postUrl = `${SITE_URL}/blog/${post.slug}`;
+  const authorUrl = `${SITE_URL}/author/${post.author.slug}`;
+  const description = post.seo?.metaDescription || post.excerpt;
+  const imageUrl = post.coverImage?.url ? absoluteUrl(post.coverImage.url) : undefined;
+  const keywords = [post.seo?.focusKeyword, ...(post.tags ?? []).map((t) => t.title)].filter(
+    Boolean
+  );
+
+  // Only render takeaways and FAQ entries that are actually filled in
+  const takeaways = (post.keyTakeaways ?? []).filter(
+    (t): t is string => typeof t === "string" && t.trim().length > 0
+  );
+  const faq = (post.faq ?? []).filter(
+    (f) => Boolean(f?.question?.trim()) && Boolean(f?.answer?.trim())
+  );
+
+  // Only show an "Updated" date when the post really was updated on a later day
+  const wasUpdated =
+    Boolean(post.updatedAt) && post.updatedAt!.slice(0, 10) !== post.publishedAt.slice(0, 10);
+
   const articleJsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.excerpt,
-    image: post.coverImage?.url,
+    "@type": "BlogPosting",
+    "@id": `${postUrl}#article`,
+    mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
+    headline: post.title.slice(0, 110),
+    description,
+    image: imageUrl ? [imageUrl] : undefined,
     datePublished: post.publishedAt,
     dateModified: post.updatedAt || post.publishedAt,
-    author: { "@type": "Person", name: post.author.name },
+    inLanguage: "en",
+    articleSection: post.category?.title,
+    keywords: keywords.length > 0 ? keywords.join(", ") : undefined,
+    isPartOf: { "@id": WEBSITE_ID },
+    author: {
+      "@type": "Person",
+      "@id": `${authorUrl}#person`,
+      name: post.author.name,
+      url: authorUrl,
+    },
     publisher: {
       "@type": "Organization",
+      "@id": ORG_ID,
       name: "DiscoveryTech Hub",
-      logo: { "@type": "ImageObject", url: "https://blog.discoverytechhub.com/logonav.png" },
+      url: MAIN_SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/logonav.png` },
     },
-    mainEntityOfPage: `https://blog.discoverytechhub.com/blog/${post.slug}`,
   };
+
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": `${postUrl}#faq`,
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+
+  const breadcrumbs = [
+    { name: "Home", path: "/" },
+    ...(post.category?.slug
+      ? [{ name: post.category.title, path: `/category/${post.category.slug}` }]
+      : []),
+    { name: post.title, path: `/blog/${post.slug}` },
+  ];
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
-      />
+      <JsonLd data={articleJsonLd} />
+      <JsonLd data={breadcrumbJsonLd(breadcrumbs)} />
+      {faq.length > 0 && <JsonLd data={faqJsonLd} />}
 
       <div className="relative overflow-hidden pt-32 pb-16 md:pt-40 md:pb-20">
         <div className="pointer-events-none absolute -top-24 -right-32 w-96 h-96 rounded-full bg-[#1A4FD6]/10 dark:bg-[#1A4FD6]/15 blur-[120px]" />
@@ -202,9 +307,24 @@ export default async function BlogPostPage({
                   />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-primary dark:text-white">{post.author.name}</p>
-                  <div className="flex items-center gap-2 font-mono text-xs text-muted-foreground">
+                  <p className="text-sm font-semibold text-primary dark:text-white">
+                    <Link
+                      href={`/author/${post.author.slug}`}
+                      className="hover:text-accent transition-colors"
+                    >
+                      {post.author.name}
+                    </Link>
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-muted-foreground">
                     <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+                    {wasUpdated && post.updatedAt && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
+                        </span>
+                      </>
+                    )}
                     <span>·</span>
                     <span className="inline-flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {post.readTime} min read
@@ -241,10 +361,55 @@ export default async function BlogPostPage({
               className="prose prose-lg max-w-none dth-fade-in-up opacity-0"
               style={{ animationDelay: "150ms" }}
             >
+              {takeaways.length > 0 && (
+                <section
+                  aria-label="Key takeaways"
+                  className="not-prose mb-10 rounded-2xl border border-accent/30 bg-accent/[0.04] p-6"
+                >
+                  <p className="font-mono text-xs tracking-widest uppercase text-accent mb-4">
+                    <span>§</span> Key takeaways
+                  </p>
+                  <ul className="space-y-3">
+                    {takeaways.map((point, i) => (
+                      <li
+                        key={i}
+                        className="flex gap-3 text-base leading-relaxed text-primary dark:text-white"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="mt-2.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                        />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
               {post.isStatic ? (
                 <div dangerouslySetInnerHTML={{ __html: post.htmlContent ?? "" }} />
               ) : (
                 <PortableText value={post.body} components={portableTextComponents} />
+              )}
+
+              {faq.length > 0 && (
+                <section className="not-prose mt-14 border-t border-border pt-10">
+                  <h2 className="text-2xl font-bold tracking-tight text-primary dark:text-white mb-6">
+                    Frequently asked questions
+                  </h2>
+                  <div className="space-y-6">
+                    {faq.map((item, i) => (
+                      <div key={i}>
+                        <h3 className="text-lg font-semibold text-primary dark:text-white mb-2">
+                          {item.question}
+                        </h3>
+                        <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-line">
+                          {item.answer}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               )}
             </article>
 
@@ -264,7 +429,14 @@ export default async function BlogPostPage({
                     />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-primary dark:text-white">{post.author.name}</p>
+                    <p className="text-sm font-bold text-primary dark:text-white">
+                      <Link
+                        href={`/author/${post.author.slug}`}
+                        className="hover:text-accent transition-colors"
+                      >
+                        {post.author.name}
+                      </Link>
+                    </p>
                     <p className="text-xs text-muted-foreground">{post.author.role}</p>
                   </div>
                 </div>

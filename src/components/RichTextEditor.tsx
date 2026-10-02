@@ -2,6 +2,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import { useEffect, useRef, useState } from "react";
 
 function randKey() {
@@ -26,6 +27,20 @@ function spansFromInlineContent(inlineContent: any[]) {
     : [{ _type: "span", _key: randKey(), text: "", marks: [] }];
 }
 
+// Table cells are stored as plain text strings, so each cell's paragraphs are
+// flattened to text, one line per paragraph.
+function tableCellToText(cell: any): string {
+  return (cell?.content ?? [])
+    .map((block: any) =>
+      (block?.content ?? [])
+        .filter((c: any) => c.type === "text")
+        .map((c: any) => c.text ?? "")
+        .join("")
+    )
+    .join("\n")
+    .trim();
+}
+
 function tiptapToPortableText(doc: any) {
   if (!doc?.content) return [];
 
@@ -37,6 +52,7 @@ function tiptapToPortableText(doc: any) {
         node.type === "bulletList" ||
         node.type === "orderedList" ||
         node.type === "blockquote" ||
+        node.type === "table" ||
         node.type === "image"
     )
     .flatMap((node: any) => {
@@ -50,6 +66,30 @@ function tiptapToPortableText(doc: any) {
             _key: randKey(),
             asset: { _type: "reference", _ref: node.attrs.assetId },
             alt: node.attrs.alt || "",
+          },
+        ];
+      }
+
+      // Tables become a "table" block: rows of plain-text cells. The first row
+      // counts as a header row when all of its cells are header cells.
+      if (node.type === "table") {
+        const rows = (node.content ?? []).filter((r: any) => r.type === "tableRow");
+        if (rows.length === 0) return [];
+        const firstRowCells = rows[0].content ?? [];
+        const hasHeaderRow =
+          firstRowCells.length > 0 && firstRowCells.every((c: any) => c.type === "tableHeader");
+        const caption = typeof node.attrs?.caption === "string" ? node.attrs.caption.trim() : "";
+        return [
+          {
+            _type: "table",
+            _key: randKey(),
+            hasHeaderRow,
+            ...(caption ? { caption } : {}),
+            rows: rows.map((row: any) => ({
+              _type: "tableRow",
+              _key: randKey(),
+              cells: (row.content ?? []).map(tableCellToText),
+            })),
           },
         ];
       }
@@ -139,6 +179,39 @@ function portableTextToTiptap(blocks: any[] | undefined) {
       continue;
     }
 
+    if (block?._type === "table") {
+      flushList();
+      const rows: any[] = Array.isArray(block.rows) ? block.rows : [];
+      if (rows.length === 0) continue;
+      // Rows may have different lengths (Studio lets you type them freely),
+      // so pad every row to the widest one.
+      const columnCount = Math.max(
+        1,
+        ...rows.map((r: any) => (Array.isArray(r?.cells) ? r.cells.length : 0))
+      );
+      const headerFirstRow = block.hasHeaderRow !== false;
+      content.push({
+        type: "table",
+        attrs: { caption: typeof block.caption === "string" ? block.caption : null },
+        content: rows.map((row: any, rowIndex: number) => ({
+          type: "tableRow",
+          content: Array.from({ length: columnCount }, (_, colIndex) => {
+            const text = String(row?.cells?.[colIndex] ?? "");
+            return {
+              type: headerFirstRow && rowIndex === 0 ? "tableHeader" : "tableCell",
+              content: text
+                ? text.split("\n").map((line) => ({
+                    type: "paragraph",
+                    content: line ? [{ type: "text", text: line }] : undefined,
+                  }))
+                : [{ type: "paragraph" }],
+            };
+          }),
+        })),
+      });
+      continue;
+    }
+
     if (block?._type !== "block") continue;
 
     const textContent = (block.children ?? []).map((span: any) => ({
@@ -213,13 +286,33 @@ export function RichTextEditor({
       }).configure({
         HTMLAttributes: { class: "rounded-lg max-w-full my-4" },
       }),
+      // The caption is kept as a node attribute so it survives a round trip
+      // through the editor. It is not drawn inside the editor itself.
+      Table.extend({
+        addAttributes() {
+          return {
+            ...this.parent?.(),
+            caption: { default: null, rendered: false },
+          };
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     immediatelyRender: false,
+    // Re-render on cursor moves too, so the table controls appear as soon as
+    // the cursor enters a table and the toolbar highlights stay accurate.
+    shouldRerenderOnTransaction: true,
     content: portableTextToTiptap(initialContent),
     editorProps: {
       attributes: {
         class:
-          "prose prose-slate max-w-none min-h-[220px] px-3.5 py-2.5 text-sm focus:outline-none",
+          "prose prose-slate max-w-none min-h-[220px] px-3.5 py-2.5 text-sm focus:outline-none " +
+          "[&_.tableWrapper]:overflow-x-auto [&_table]:w-full [&_table]:table-fixed [&_table]:border-collapse " +
+          "[&_td]:border [&_td]:border-slate-300 [&_td]:p-2 [&_td]:align-top " +
+          "[&_th]:border [&_th]:border-slate-300 [&_th]:bg-slate-100 [&_th]:p-2 [&_th]:text-left [&_th]:align-top " +
+          "[&_td_p]:m-0 [&_th_p]:m-0 [&_.selectedCell]:bg-blue-50",
       },
     },
     onUpdate: ({ editor }) => setJson(JSON.stringify(tiptapToPortableText(editor.getJSON()))),
@@ -257,6 +350,20 @@ export function RichTextEditor({
       setUploading(false);
     }
   }
+
+  function handleTableCaption() {
+    if (!editor) return;
+    const current = (editor.getAttributes("table").caption as string | null) ?? "";
+    const next = window.prompt("Table caption (leave empty to remove it)", current);
+    if (next === null) return;
+    editor
+      .chain()
+      .focus()
+      .updateAttributes("table", { caption: next.trim() || null })
+      .run();
+  }
+
+  const inTable = editor?.isActive("table") ?? false;
 
   return (
     <div className="rounded-lg border border-slate-300 focus-within:ring-2 focus-within:ring-blue-500 overflow-hidden bg-white">
@@ -324,6 +431,15 @@ export function RichTextEditor({
         >
           {uploading ? "…" : "🖼"}
         </ToolbarButton>
+        <ToolbarButton
+          active={inTable}
+          onClick={() =>
+            editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+          }
+          label="Insert table"
+        >
+          ▦
+        </ToolbarButton>
         <input
           ref={fileInputRef}
           type="file"
@@ -331,6 +447,50 @@ export function RichTextEditor({
           onChange={handleImageSelected}
           className="hidden"
         />
+        {inTable && (
+          <>
+            <div className="mx-1 h-5 w-px bg-slate-300 shrink-0" />
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().addRowAfter().run()}
+              label="Add row below"
+            >
+              + row
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().deleteRow().run()}
+              label="Delete this row"
+            >
+              − row
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().addColumnAfter().run()}
+              label="Add column to the right"
+            >
+              + col
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().deleteColumn().run()}
+              label="Delete this column"
+            >
+              − col
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().toggleHeaderRow().run()}
+              label="Turn the first row into a header, or back"
+            >
+              Header
+            </ToolbarButton>
+            <ToolbarButton onClick={handleTableCaption} label="Set table caption">
+              Caption
+            </ToolbarButton>
+            <ToolbarButton
+              onClick={() => editor?.chain().focus().deleteTable().run()}
+              label="Delete the whole table"
+            >
+              ✕ table
+            </ToolbarButton>
+          </>
+        )}
       </div>
       <EditorContent editor={editor} />
       <input type="hidden" name={name} value={json} readOnly />
@@ -354,6 +514,7 @@ function ToolbarButton({
       type="button"
       onClick={onClick}
       aria-label={label}
+      title={label}
       className={`shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold transition-colors ${
         active ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-200"
       }`}

@@ -1,69 +1,128 @@
 import type { Metadata } from "next";
 
 /**
- * SEO.tsx
+ * Seo.tsx
  * ------------------------------
- * Two things live here:
+ * 1. buildMetadata() fills in the repetitive parts of a Next.js Metadata
+ *    object (canonical URL, OG, Twitter card, RSS link) so each page only
+ *    supplies what is different about it.
+ * 2. <JsonLd /> renders a JSON-LD <script> tag safely.
+ * 3. breadcrumbJsonLd(), ogImage() and absoluteUrl() are shared helpers.
+ * 4. SOCIAL_LINKS is the single source of truth for profile URLs. The root
+ *    layout, the structured data and the footer buttons all read from it.
  *
- * 1. buildMetadata() — a helper that fills in the repetitive parts of a
- *    Next.js Metadata object (canonical URL, OG, Twitter card) from a
- *    small set of inputs, so every page.tsx / generateMetadata() only
- *    has to supply what's actually different about that page.
- *
- * 2. <JsonLd /> — a tiny component that safely renders a JSON-LD
- *    <script> tag for structured data (Article, CollectionPage,
- *    Organization, etc.), so that markup isn't hand-typed on every page.
- *
- * Neither of these makes Google crawl the site on its own — that still
- * requires the checklist at the bottom of this file — but they make
- * sure every page emits correct, consistent tags once it IS crawled.
+ * Titles passed to buildMetadata() go through the "%s | DiscoveryTech Hub"
+ * template in the root layout, so do not add the brand name yourself.
+ * Use titleAbsolute when the title is long or already carries the brand.
  */
 
-const SITE_NAME = "DiscoveryTech Hub Blog";
-const SITE_URL = "https://blog.discoverytechhub.com";
+export const SITE_NAME = "DiscoveryTech Hub Blog";
+export const SITE_URL = "https://blog.discoverytechhub.com";
+export const MAIN_SITE_URL = "https://discoverytechhub.com";
+export const ORG_ID = `${MAIN_SITE_URL}/#organization`;
+export const WEBSITE_ID = `${SITE_URL}/#website`;
 const DEFAULT_OG_IMAGE = "/og.png";
-const TWITTER_HANDLE = "@disctechhub"; // ← confirm this handle exists before launch
+const TWITTER_HANDLE = "@disctechhub";
+
+/** Official profile URLs. Change a URL here and it updates everywhere. */
+export const SOCIAL_LINKS = {
+  facebook: "https://www.facebook.com/disctechhub",
+  x: "https://x.com/disctechhub",
+  linkedin: "https://www.linkedin.com/company/discoverytechhub",
+  instagram: "https://www.instagram.com/discoverytechhub",
+  tiktok: "https://www.tiktok.com/@discoverytechhub",
+} as const;
+
+/** Flat list for schema.org "sameAs". */
+export const SOCIAL_SAME_AS: string[] = Object.values(SOCIAL_LINKS);
+
+type ShareImage = {
+  url: string;
+  width?: number;
+  height?: number;
+  alt?: string;
+};
 
 type BuildMetadataInput = {
-  /** Page-specific title. Rendered through the "%s | DiscoveryTech Hub" template set in layout.tsx. */
+  /** Page-specific title, without the brand name. */
   title: string;
+  /** true = do not append " | DiscoveryTech Hub" to the title. */
+  titleAbsolute?: boolean;
   description: string;
   /** Path only, e.g. "/blog/my-post" or "/category/security". Root is "/". */
   path: string;
-  /** Defaults to DEFAULT_OG_IMAGE if omitted. */
-  image?: { url: string; width?: number; height?: number; alt?: string };
+  /** Defaults to the site's /og.png if omitted. */
+  image?: ShareImage;
   /** "article" for blog posts, "website" for everything else (default). */
   type?: "article" | "website";
-  /** Only relevant when type is "article". */
+  /** Only used when type is "article". */
   publishedTime?: string;
+  modifiedTime?: string;
   authorName?: string;
-  /** Set false to noindex a page (e.g. an internal search results page). */
+  /** Set false to noindex a page. */
   index?: boolean;
+  /** Defaults to the same value as index. Use index:false + follow:true for archives. */
+  follow?: boolean;
 };
+
+/** Turns a path or URL into a full https URL on this site. */
+export function absoluteUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
+  return `${SITE_URL}${pathOrUrl.startsWith("/") ? "" : "/"}${pathOrUrl}`;
+}
+
+/**
+ * Share image for Open Graph and Twitter. Sanity CDN images are cropped to
+ * 1200x630 by the CDN; local /public images are used as they are.
+ */
+export function ogImage(url: string | null | undefined, alt: string): ShareImage {
+  if (!url) return { url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt };
+  if (url.includes("cdn.sanity.io")) {
+    const sep = url.includes("?") ? "&" : "?";
+    return {
+      url: `${url}${sep}w=1200&h=630&fit=crop&auto=format`,
+      width: 1200,
+      height: 630,
+      alt,
+    };
+  }
+  return { url, alt };
+}
 
 export function buildMetadata({
   title,
+  titleAbsolute = false,
   description,
   path,
   image,
   type = "website",
   publishedTime,
+  modifiedTime,
   authorName,
   index = true,
+  follow,
 }: BuildMetadataInput): Metadata {
-  const url = `${SITE_URL}${path}`;
-  const ogImage = image ?? { url: DEFAULT_OG_IMAGE, width: 1200, height: 630, alt: SITE_NAME };
+  const url = `${SITE_URL}${path === "/" ? "" : path}`;
+  const shareImage: ShareImage = image ?? {
+    url: DEFAULT_OG_IMAGE,
+    width: 1200,
+    height: 630,
+    alt: SITE_NAME,
+  };
+  const shouldFollow = follow ?? index;
 
   return {
-    title,
+    title: titleAbsolute ? { absolute: title } : title,
     description,
+    // Page-level "alternates" replaces the layout's, so the RSS link is repeated here.
     alternates: {
       canonical: url,
+      types: { "application/rss+xml": `${SITE_URL}/feed.xml` },
     },
     robots: {
       index,
-      follow: index,
-      googleBot: { index, follow: index },
+      follow: shouldFollow,
+      googleBot: { index, follow: shouldFollow },
     },
     openGraph: {
       title,
@@ -72,8 +131,16 @@ export function buildMetadata({
       siteName: SITE_NAME,
       locale: "en_NG",
       type,
-      images: [{ url: ogImage.url, width: ogImage.width ?? 1200, height: ogImage.height ?? 630, alt: ogImage.alt ?? title }],
+      images: [
+        {
+          url: shareImage.url,
+          ...(shareImage.width ? { width: shareImage.width } : {}),
+          ...(shareImage.height ? { height: shareImage.height } : {}),
+          alt: shareImage.alt ?? title,
+        },
+      ],
       ...(type === "article" && publishedTime ? { publishedTime } : {}),
+      ...(type === "article" && modifiedTime ? { modifiedTime } : {}),
       ...(type === "article" && authorName ? { authors: [authorName] } : {}),
     },
     twitter: {
@@ -82,60 +149,60 @@ export function buildMetadata({
       description,
       site: TWITTER_HANDLE,
       creator: TWITTER_HANDLE,
-      images: [ogImage.url],
+      images: [shareImage.url],
     },
   };
 }
 
 /**
  * Renders a JSON-LD <script> tag from a plain schema.org object.
- * Usage: <JsonLd data={articleSchema} />
- * Safe to render more than once per page (each gets its own script tag).
+ * "<" is escaped so content can never close the script tag early.
  */
 export function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
     <script
       type="application/ld+json"
-      // eslint-disable-next-line react/no-danger -- JSON.stringify output, not user input
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+      // eslint-disable-next-line react/no-danger -- JSON.stringify output with "<" escaped
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(data).replace(/</g, "\\u003c"),
+      }}
     />
   );
 }
 
-/** Shared Organization schema — same shape currently inlined in layout.tsx. */
+/** Same organization entity the root layout emits, for reuse elsewhere. */
 export const organizationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Organization",
+  "@id": ORG_ID,
   name: "DiscoveryTech Hub",
-  url: "https://discoverytechhub.com",
-  logo: `${SITE_URL}/logonav.png`,
-  sameAs: [
-    "https://web.facebook.com/disctechhub",
-    "https://x.com/disctechhub",
-    "https://www.linkedin.com/company/discoverytechhub",
-  ],
+  url: MAIN_SITE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: `${SITE_URL}/logonav.png`,
+  },
+  sameAs: SOCIAL_SAME_AS,
 };
 
+/** BreadcrumbList. Pass paths, not full URLs: [{ name: "Home", path: "/" }, ...] */
+export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: item.name,
+      item: `${SITE_URL}${item.path === "/" ? "" : item.path}`,
+    })),
+  };
+}
+
 /**
- * ────────────────────────────────────────────────────────────────
- * PRE-LAUNCH SEO CHECKLIST — a component alone won't make the blog
- * "visible"; these are the actual gating items:
- *
- * [ ] src/app/robots.ts (or public/robots.txt) exists and doesn't
- *     accidentally block crawlers (common on staging subdomains).
- * [ ] src/app/sitemap.ts is present (you already have this) and lists
- *     every real URL — verify it's not still pointing at placeholder data.
- * [ ] metadata.verification.google in layout.tsx is filled in with your
- *     real Search Console verification code (it's currently an empty
- *     string — Search Console can't confirm ownership without it).
- * [ ] Once live, manually submit the sitemap URL in Google Search
- *     Console (Sitemaps → Add a new sitemap) — don't just wait for
- *     Google to find it on its own; that can take weeks.
- * [ ] Confirm @disctechhub is a real, live handle before launch, or
- *     swap TWITTER_HANDLE above — a dead handle in Twitter Card tags
- *     doesn't break anything but looks unfinished.
- * [ ] /og.png must actually exist at the project root's /public folder
- *     at 1200�, 630 — this is what shows when the blog is shared on
- *     WhatsApp, Facebook, LinkedIn, etc.
- * ────────────────────────────────────────────────────────────────
+ * Pre-launch checklist
+ * [ ] Submit https://blog.discoverytechhub.com/sitemap.xml in Google Search
+ *     Console (Sitemaps -> Add a new sitemap).
+ * [ ] Make sure the site is verified in Search Console. If you verify with a
+ *     meta tag, add it under `verification.google` in the root layout.
+ * [ ] /public/og.png should be 1200 x 630.
  */

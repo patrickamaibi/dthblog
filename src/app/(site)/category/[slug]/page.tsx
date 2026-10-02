@@ -15,6 +15,14 @@ import {
   Folder,
 } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  JsonLd,
+  buildMetadata,
+  breadcrumbJsonLd,
+  ogImage,
+  SITE_URL,
+  WEBSITE_ID,
+} from "@/components/Seo";
 
 export const revalidate = 60; // re-fetch from Sanity at most once every 60 seconds
 
@@ -47,24 +55,18 @@ export async function generateMetadata({
   if (!category) return {};
 
   const posts = await getPostsByCategory(category.slug);
-  const heroPost = posts[0];
+  const shareSource = category.heroImage?.url ? category.heroImage : posts[0]?.coverImage;
 
-  return {
-    title: `${category.title} — DiscoveryTech Hub Blog`,
-    description: category.description,
-    alternates: {
-      canonical: `https://blog.discoverytechhub.com/category/${category.slug}`,
-    },
-    openGraph: {
-      title: category.title,
-      description: category.description,
-      type: "website",
-      url: `https://blog.discoverytechhub.com/category/${category.slug}`,
-      images: heroPost?.coverImage?.url
-        ? [{ url: heroPost.coverImage.url, width: 1920, height: 823, alt: heroPost.coverImage.alt }]
-        : [],
-    },
-  };
+  return buildMetadata({
+    title: `${category.title} Articles`,
+    description:
+      category.description ||
+      `Articles and guides on ${category.title} from DiscoveryTech Hub.`,
+    path: `/category/${category.slug}`,
+    image: ogImage(shareSource?.url, shareSource?.alt || category.title),
+    // An empty category is a thin page, so keep it out of search results
+    index: posts.length > 0,
+  });
 }
 
 const MESH_NODES = [
@@ -135,24 +137,32 @@ export default async function CategoryPage({
 
   const heroImage = category.heroImage?.url ? category.heroImage : posts[0]?.coverImage;
 
+  const pageUrl = `${SITE_URL}/category/${category.slug}`;
+
   const collectionJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: category.title,
     description: category.description,
-    url: `https://blog.discoverytechhub.com/category/${category.slug}`,
+    url: pageUrl,
+    inLanguage: "en",
+    isPartOf: { "@id": WEBSITE_ID },
     hasPart: posts.map((p) => ({
       "@type": "Article",
       headline: p.title,
-      url: `https://blog.discoverytechhub.com/blog/${p.slug}`,
+      url: `${SITE_URL}/blog/${p.slug}`,
     })),
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionJsonLd) }}
+      <JsonLd data={collectionJsonLd} />
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Topics", path: "/category" },
+          { name: category.title, path: `/category/${category.slug}` },
+        ])}
       />
 
       <div className="relative w-full mt-20 overflow-hidden min-h-[400px] sm:min-h-0 sm:aspect-[21/9]">

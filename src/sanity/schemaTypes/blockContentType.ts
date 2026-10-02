@@ -1,5 +1,10 @@
-import {defineType, defineArrayMember} from 'sanity'
+import {defineType, defineArrayMember, defineField} from 'sanity'
 import {ImageIcon} from '@sanity/icons/Image'
+import {Icon} from '@sanity/icons'
+import {createElement} from 'react'
+
+const TableIcon = (props: Record<string, unknown>) =>
+  createElement(Icon, {...props, symbol: 'th-large'})
 
 /**
  * This is the schema type for block content used in the post document type
@@ -71,6 +76,73 @@ export const blockContentType = defineType({
           title: 'Alternative Text',
         }
       ]
+    }),
+    // A simple table. Rows are lists of plain-text cells. The post page renders
+    // it as a real <table>, and the custom admin editor reads and writes the
+    // same shape, so tables made in either editor open in the other.
+    defineArrayMember({
+      type: 'object',
+      name: 'table',
+      title: 'Table',
+      icon: TableIcon,
+      fields: [
+        defineField({
+          name: 'caption',
+          title: 'Caption',
+          type: 'string',
+          description: 'Optional short title for the table, for example "Penalties by business size".',
+        }),
+        defineField({
+          name: 'hasHeaderRow',
+          title: 'First row is a header',
+          type: 'boolean',
+          initialValue: true,
+        }),
+        defineField({
+          name: 'rows',
+          title: 'Rows',
+          type: 'array',
+          description:
+            'Every row needs the same number of cells. The first row is the header when the switch above is on.',
+          of: [
+            defineArrayMember({
+              type: 'object',
+              name: 'tableRow',
+              title: 'Row',
+              fields: [
+                defineField({
+                  name: 'cells',
+                  title: 'Cells',
+                  type: 'array',
+                  of: [defineArrayMember({type: 'string'})],
+                }),
+              ],
+              preview: {
+                select: {cells: 'cells'},
+                prepare({cells}) {
+                  return {
+                    title: Array.isArray(cells) && cells.length > 0 ? cells.join('  |  ') : 'Empty row',
+                  }
+                },
+              },
+            }),
+          ],
+        }),
+      ],
+      preview: {
+        select: {caption: 'caption', rows: 'rows'},
+        prepare({caption, rows}) {
+          const rowList = Array.isArray(rows) ? rows : []
+          const columnCount = rowList.reduce(
+            (max: number, row: {cells?: unknown[]}) => Math.max(max, row?.cells?.length ?? 0),
+            0,
+          )
+          return {
+            title: caption || 'Table',
+            subtitle: `${rowList.length} rows × ${columnCount} columns`,
+          }
+        },
+      },
     }),
   ],
 })

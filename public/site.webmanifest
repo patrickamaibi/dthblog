@@ -1,6 +1,8 @@
 {
-  "name": "MyWebSite",
-  "short_name": "MySite",
+  "name": "DiscoveryTech Hub Blog",
+  "short_name": "DTH Blog",
+  "description": "Sharp thinking on ICT, digital transformation, and technology in Nigeria and Africa.",
+  "start_url": "/",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
@@ -15,7 +17,7 @@
       "purpose": "maskable"
     }
   ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "theme_color": "#0A1F44",
+  "background_color": "#0A1F44",
   "display": "standalone"
 }
