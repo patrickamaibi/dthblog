@@ -71,6 +71,67 @@ const portableTextComponents: PortableTextComponents = {
         </figure>
       );
     },
+    // Rows of plain-text cells. Rendered as a real <table> with a header row so
+    // search and AI engines can read it. Wide tables scroll sideways inside
+    // their own box instead of breaking the page layout on phones.
+    table: ({ value }) => {
+      const rows: string[][] = Array.isArray(value?.rows)
+        ? value.rows.map((row: { cells?: unknown[] }) =>
+            Array.isArray(row?.cells) ? row.cells.map((cell) => String(cell ?? "")) : []
+          )
+        : [];
+      const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0);
+      if (rows.length === 0 || columnCount === 0) return null;
+
+      const hasHeaderRow = value?.hasHeaderRow !== false;
+      const pad = (row: string[]) =>
+        Array.from({ length: columnCount }, (_, i) => row[i] ?? "");
+      const headRow = hasHeaderRow ? pad(rows[0]) : null;
+      const bodyRows = (hasHeaderRow ? rows.slice(1) : rows).map(pad);
+
+      return (
+        <figure className="my-8 not-prose">
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full border-collapse text-left text-sm">
+              {value?.caption && (
+                <caption className="border-b border-border px-4 py-3 text-left text-sm font-semibold text-primary dark:text-white">
+                  {value.caption}
+                </caption>
+              )}
+              {headRow && (
+                <thead className="bg-accent/[0.06]">
+                  <tr>
+                    {headRow.map((cell, i) => (
+                      <th
+                        key={i}
+                        scope="col"
+                        className="border-b border-border px-4 py-3 align-top font-semibold text-primary dark:text-white"
+                      >
+                        {cell}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+              )}
+              <tbody>
+                {bodyRows.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-b border-border last:border-b-0">
+                    {row.map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className="px-4 py-3 align-top leading-relaxed text-muted-foreground whitespace-pre-line"
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      );
+    },
   },
   block: {
     blockquote: ({ children }) => (
