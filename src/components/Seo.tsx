@@ -8,6 +8,8 @@ import type { Metadata } from "next";
  *    supplies what is different about it.
  * 2. <JsonLd /> renders a JSON-LD <script> tag safely.
  * 3. breadcrumbJsonLd(), ogImage() and absoluteUrl() are shared helpers.
+ * 4. SOCIAL_LINKS is the single source of truth for profile URLs. The root
+ *    layout, the structured data and the footer buttons all read from it.
  *
  * Titles passed to buildMetadata() go through the "%s | DiscoveryTech Hub"
  * template in the root layout, so do not add the brand name yourself.
@@ -20,7 +22,19 @@ export const MAIN_SITE_URL = "https://discoverytechhub.com";
 export const ORG_ID = `${MAIN_SITE_URL}/#organization`;
 export const WEBSITE_ID = `${SITE_URL}/#website`;
 const DEFAULT_OG_IMAGE = "/og.png";
-const TWITTER_HANDLE = "@disctechhub"; // confirm this handle exists
+const TWITTER_HANDLE = "@disctechhub";
+
+/** Official profile URLs. Change a URL here and it updates everywhere. */
+export const SOCIAL_LINKS = {
+  facebook: "https://www.facebook.com/disctechhub",
+  x: "https://x.com/disctechhub",
+  linkedin: "https://www.linkedin.com/company/discoverytechhub",
+  instagram: "https://www.instagram.com/discoverytechhub",
+  tiktok: "https://www.tiktok.com/@discoverytechhub",
+} as const;
+
+/** Flat list for schema.org "sameAs". */
+export const SOCIAL_SAME_AS: string[] = Object.values(SOCIAL_LINKS);
 
 type ShareImage = {
   url: string;
@@ -167,11 +181,7 @@ export const organizationJsonLd = {
     "@type": "ImageObject",
     url: `${SITE_URL}/logonav.png`,
   },
-  sameAs: [
-    "https://www.facebook.com/disctechhub",
-    "https://x.com/disctechhub",
-    "https://www.linkedin.com/company/discoverytechhub",
-  ],
+  sameAs: SOCIAL_SAME_AS,
 };
 
 /** BreadcrumbList. Pass paths, not full URLs: [{ name: "Home", path: "/" }, ...] */
@@ -194,6 +204,5 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
  *     Console (Sitemaps -> Add a new sitemap).
  * [ ] Make sure the site is verified in Search Console. If you verify with a
  *     meta tag, add it under `verification.google` in the root layout.
- * [ ] Confirm @disctechhub is a real handle, or change TWITTER_HANDLE above.
  * [ ] /public/og.png should be 1200 x 630.
  */

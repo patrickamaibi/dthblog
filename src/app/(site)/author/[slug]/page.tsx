@@ -92,7 +92,8 @@ export default async function AuthorPage({
         ])}
       />
 
-      <main className="pt-28 pb-24 min-h-screen">
+      {/* The site layout already provides the <main> element */}
+      <div className="pt-28 pb-24 min-h-screen">
         <div className="mx-auto max-w-7xl px-6 sm:px-8">
           <Link
             href="/"
@@ -185,7 +186,7 @@ export default async function AuthorPage({
             </div>
           )}
         </div>
-      </main>
+      </div>
     </>
   );
 }

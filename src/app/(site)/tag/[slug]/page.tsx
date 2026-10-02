@@ -56,7 +56,8 @@ export default async function TagPage({
   if (!tag) notFound();
 
   return (
-    <main className="pt-28 pb-24 min-h-screen">
+    // The site layout already provides the <main> element
+    <div className="pt-28 pb-24 min-h-screen">
       <div className="mx-auto max-w-7xl px-6 sm:px-8">
         <Link href="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-accent transition-colors mb-10">
           <ArrowLeft className="w-4 h-4" /> Home
@@ -91,6 +92,6 @@ export default async function TagPage({
           ))}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { SOCIAL_SAME_AS } from "@/components/Seo";
 
 // System font stacks used in place of next/font/google (Inter, JetBrains Mono).
 // This avoids the dev-time fetch to fonts.googleapis.com — same CSS variable
@@ -59,7 +60,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "DiscoveryTech Hub Blog",
     description: DESCRIPTION,
-    site: "@disctechhub", // ← confirm this handle exists
+    site: "@disctechhub",
     creator: "@disctechhub",
     images: ["/og.png"],
   },
@@ -84,11 +85,8 @@ const jsonLd = {
         "@type": "ImageObject",
         url: `${SITE_URL}/logonav.png`,
       },
-      sameAs: [
-        "https://www.facebook.com/disctechhub",
-        "https://x.com/disctechhub",
-        "https://www.linkedin.com/company/discoverytechhub",
-      ],
+      // Profile URLs live in one place: SOCIAL_LINKS in components/Seo.tsx
+      sameAs: SOCIAL_SAME_AS,
     },
     {
       "@type": "WebSite",
