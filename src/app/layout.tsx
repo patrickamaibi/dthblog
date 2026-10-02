@@ -19,15 +19,19 @@ export const viewport: Viewport = {
   ],
 };
 
+const SITE_URL = "https://blog.discoverytechhub.com";
+const MAIN_SITE_URL = "https://discoverytechhub.com";
+const DESCRIPTION =
+  "Sharp thinking on ICT, digital transformation, and technology in Nigeria and Africa.";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://blog.discoverytechhub.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "DiscoveryTech Hub Blog",
     template: "%s | DiscoveryTech Hub",
   },
-  description: "Sharp thinking on ICT, digital transformation, and technology in Nigeria and Africa.",
-  keywords: ["technology", "Nigeria", "Africa", "ICT", "digital transformation", "engineering", "design"],
-  authors: [{ name: "DiscoveryTech Hub", url: "https://discoverytechhub.com" }],
+  description: DESCRIPTION,
+  authors: [{ name: "DiscoveryTech Hub", url: MAIN_SITE_URL }],
   creator: "DiscoveryTech Hub",
   publisher: "DiscoveryTech Hub",
   manifest: "/site.webmanifest",
@@ -44,8 +48,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "DiscoveryTech Hub Blog",
-    description: "Sharp thinking on ICT, digital transformation, and technology in Nigeria and Africa.",
-    url: "https://blog.discoverytechhub.com",
+    description: DESCRIPTION,
+    url: SITE_URL,
     siteName: "DiscoveryTech Hub Blog",
     images: [{ url: "/og.png", width: 1200, height: 630 }],
     locale: "en_NG",
@@ -54,31 +58,47 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "DiscoveryTech Hub Blog",
-    description: "Sharp thinking on ICT, digital transformation, and technology in Nigeria and Africa.",
-    site: "@disctechhub", // ← confirm this handle exists before launch
+    description: DESCRIPTION,
+    site: "@disctechhub", // ← confirm this handle exists
     creator: "@disctechhub",
     images: ["/og.png"],
   },
+  // No canonical here on purpose: a canonical in the root layout is inherited by
+  // every page that doesn't set its own, which points them all at the homepage.
+  // Each page sets its own canonical in its own metadata.
   alternates: {
-    canonical: "https://blog.discoverytechhub.com",
-    types: { "application/rss+xml": "https://blog.discoverytechhub.com/feed.xml" },
+    types: { "application/rss+xml": `${SITE_URL}/feed.xml` },
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
-  verification: {
-    google: "", // ← Search Console verification code (Section 5 requires this wired up)
-  },
 };
 
-const orgJsonLd = {
+const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "DiscoveryTech Hub",
-  url: "https://discoverytechhub.com",
-  logo: "https://blog.discoverytechhub.com/logonav.png",
-  sameAs: [
-    "https://web.facebook.com/disctechhub",
-    "https://x.com/disctechhub",
-    "https://www.linkedin.com/company/discoverytechhub",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${MAIN_SITE_URL}/#organization`,
+      name: "DiscoveryTech Hub",
+      url: MAIN_SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/logonav.png`,
+      },
+      sameAs: [
+        "https://www.facebook.com/disctechhub",
+        "https://x.com/disctechhub",
+        "https://www.linkedin.com/company/discoverytechhub",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: "DiscoveryTech Hub Blog",
+      description: DESCRIPTION,
+      inLanguage: "en",
+      publisher: { "@id": `${MAIN_SITE_URL}/#organization` },
+    },
   ],
 };
 
@@ -88,7 +108,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <head>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+          }}
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">

@@ -1,4 +1,6 @@
-import { POSTS, formatDate } from "@/lib/data";
+import { getAllPosts } from "@/sanity/lib/queries";
+
+export const revalidate = 3600;
 
 const BASE_URL = "https://blog.discoverytechhub.com";
 
@@ -10,17 +12,42 @@ function escapeXml(str: string) {
     .replace(/"/g, "&quot;");
 }
 
+function toDate(value?: string | null): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 export async function GET() {
-  const items = POSTS.map((post) => `
+  // getAllPosts() merges Sanity + static posts, so the feed matches the site
+  const posts = (await getAllPosts()).slice(0, 50);
+
+  const dates = posts
+    .map((p) => toDate(p.updatedAt) ?? toDate(p.publishedAt))
+    .filter((d): d is Date => d instanceof Date);
+  const lastBuild = dates.length
+    ? new Date(Math.max(...dates.map((d) => d.getTime())))
+    : new Date();
+
+  const items = posts
+    .map((post) => {
+      const pub = toDate(post.publishedAt);
+      return `
     <item>
       <title>${escapeXml(post.title)}</title>
       <link>${BASE_URL}/blog/${post.slug}</link>
       <guid isPermaLink="true">${BASE_URL}/blog/${post.slug}</guid>
-      <description>${escapeXml(post.excerpt)}</description>
-      <pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>
-      <author>noreply@discoverytechhub.com (${escapeXml(post.author.name)})</author>
-      <category>${escapeXml(post.category.title)}</category>
-    </item>`).join("");
+      <description>${escapeXml(post.excerpt ?? "")}</description>${
+        pub ? `\n      <pubDate>${pub.toUTCString()}</pubDate>` : ""
+      }
+      <author>noreply@discoverytechhub.com (${escapeXml(post.author?.name ?? "DiscoveryTech Hub")})</author>${
+        post.category?.title
+          ? `\n      <category>${escapeXml(post.category.title)}</category>`
+          : ""
+      }
+    </item>`;
+    })
+    .join("");
 
   const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -31,9 +58,8 @@ export async function GET() {
     <language>en-NG</language>
     <managingEditor>info@discoverytechhub.com (DiscoveryTech Hub)</managingEditor>
     <webMaster>info@discoverytechhub.com</webMaster>
-    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
-    <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
-    ${items}
+    <lastBuildDate>${lastBuild.toUTCString()}</lastBuildDate>
+    <atom:link href="${BASE_URL}/feed.xml" rel="self" type="application/rss+xml"/>${items}
   </channel>
 </rss>`;
 
